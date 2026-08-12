@@ -116,6 +116,13 @@ enigma serve --port 8737 --token SECRET --allow-host authorized-target.example
 enigma mcp   --allow-host authorized-target.example      # for an AI agent
 ```
 
+**Runnable MCP demo** — a simulated OpenClaw agent verifies findings against a
+real local target over MCP (no install, no external network):
+
+```bash
+python examples/mcp/openclaw_agent_demo.py
+```
+
 Safety for exposed deployments: set a bearer token (`--token` / `ENIGMA_API_TOKEN`)
 and a server-side host allowlist (`--allow-host`) so an endpoint can't be turned
 into a general-purpose scanner. See [`docs/integration.md`](docs/integration.md).
@@ -180,7 +187,7 @@ src/enigma/
   integrations/   REST + webhook API, MCP server, client SDK
   controller.py   end-to-end orchestration
   cli.py          `enigma validate` / `verify` / `serve` / `mcp`
-tests/            unit + integration (local HTTP server, REST API, MCP) — 71 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 73 tests
 examples/         assessment / findings / verification-result JSON
 docs/             architecture, authorization, verification, evidence, osstmm...
 ```
@@ -190,7 +197,7 @@ docs/             architecture, authorization, verification, evidence, osstmm...
 ## Tests
 
 ```bash
-python3 -m pytest          # 71 tests, no external network required
+python3 -m pytest          # 73 tests, no external network required
 ```
 
 The integration suite spins up a throwaway local HTTP server on `127.0.0.1` and

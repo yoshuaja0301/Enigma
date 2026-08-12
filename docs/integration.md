@@ -88,6 +88,12 @@ Tools exposed:
 | `verify_findings` | `{assessment, findings}` | verify and return a report |
 | `get_result` | `{assessment_id}` | fetch a previous report |
 
+**Runnable end-to-end demo:** `python examples/mcp/openclaw_agent_demo.py` acts
+as a simulated OpenClaw agent that connects over MCP and verifies findings
+against a real local target (no install, no external network). See
+[`examples/mcp/`](../examples/mcp/). The agent side uses the dependency-free
+`enigma.integrations.mcp_client.MCPStdioClient`.
+
 ## 4. Client SDK / connector
 
 For Python consumers of the REST API:
