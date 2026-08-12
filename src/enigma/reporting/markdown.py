@@ -14,6 +14,48 @@ _VERDICT_ICON = {
 }
 
 
+def _rav_section(rav: dict) -> List[str]:
+    """Render the OSSTMM RAV block (empty when no RAV was computed)."""
+
+    if not rav:
+        return []
+    porosity = rav.get("porosity", {})
+    controls = rav.get("controls", {})
+    limitations = rav.get("limitations", {})
+    basis = rav.get("basis", {})
+
+    lines = ["## OSSTMM RAV (Risk Assessment Value)", ""]
+    lines.append("| Metric | Value |")
+    lines.append("|---|---|")
+    lines.append(f"| **Actual Security** | **{rav.get('actual_security')} %** ({rav.get('grade')}) |")
+    lines.append(f"| Security deficit | {rav.get('security_deficit')} % |")
+    lines.append(f"| True Protection | {rav.get('true_protection')} % |")
+    lines.append(f"| True Coverage | {rav.get('true_coverage')} % |")
+    lines.append(
+        f"| Porosity (OpSec) | {porosity.get('total')} "
+        f"(visibility {porosity.get('visibility')}, access {porosity.get('access')}, "
+        f"trust {porosity.get('trust')}) |"
+    )
+    lines.append(f"| Controls evidenced | {controls.get('total')} of 10 |")
+    lines.append(f"| Limitations (verified) | {limitations.get('total')} |")
+    lines.append(f"| Excluded (unverified) | {rav.get('excluded_unverified')} |")
+    lines.append("")
+    if limitations.get("counts"):
+        breakdown = ", ".join(f"{k}: {v}" for k, v in sorted(limitations["counts"].items()))
+        lines.append(f"Limitation categories — {breakdown}.")
+        lines.append("")
+    if basis.get("formula"):
+        lines.append(f"`{basis['formula']}`")
+        lines.append("")
+    lines.append(
+        "> Computed from **verified observations only** — `CONFIRMED` findings become "
+        "limitations, `NOT_CONFIRMED` findings evidence a control, and unverified "
+        "(`reported` / `INCONCLUSIVE`) findings are excluded and counted separately."
+    )
+    lines.append("")
+    return lines
+
+
 def to_markdown(results: List[Any], summary: Optional[Summary] = None, title: str = "Enigma Assessment Report") -> str:
     summary = summary or summarize(results)
     lines: List[str] = []
@@ -33,6 +75,7 @@ def to_markdown(results: List[Any], summary: Optional[Summary] = None, title: st
     lines.append(f"| Confirmation rate | {summary.confirmation_rate:.0%} |")
     lines.append(f"| False-positive rate | {summary.false_positive_rate:.0%} |")
     lines.append("")
+    lines.extend(_rav_section(summary.rav))
     lines.append("## Findings")
     lines.append("")
 

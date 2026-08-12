@@ -18,6 +18,7 @@ The three built-in procedures are intentionally observational, not exploitative:
 
 from __future__ import annotations
 
+import re
 import secrets
 import time
 from dataclasses import dataclass, field
@@ -372,6 +373,110 @@ class TlsRedirectProcedure:
         )
 
 
+class ClickjackingProcedure:
+    """Observe whether the page can be framed (no anti-framing protection).
+
+    Non-destructive GET. Hypothesis (weakness) = neither `X-Frame-Options` nor a
+    CSP `frame-ancestors` directive is present, so the page is frameable.
+    """
+
+    key = "clickjacking"
+
+    def applies_to(self, finding: Finding) -> bool:  # noqa: ARG002 - always applicable
+        return True
+
+    def probe(self, ctx: ProbeContext, finding: Finding) -> ProbeOutcome:
+        resp = ctx.send("GET")
+        if resp.status == 0:
+            return ProbeOutcome(False, {"check": "clickjacking"}, error=resp.error or "request failed")
+        xfo = resp.header("X-Frame-Options")
+        csp = resp.header("Content-Security-Policy") or ""
+        frame_ancestors = "frame-ancestors" in csp.lower()
+        protected = bool(xfo) or frame_ancestors
+        return ProbeOutcome(
+            condition_met=not protected,  # weakness = frameable
+            observation={
+                "check": "clickjacking",
+                "x_frame_options": xfo,
+                "csp_frame_ancestors": frame_ancestors,
+                "frameable": not protected,
+                "status": resp.status,
+            },
+        )
+
+
+class DirectoryListingProcedure:
+    """Observe whether directory/auto-index listing is exposed.
+
+    Non-destructive GET; only response signatures are inspected. Hypothesis
+    (weakness) = the body looks like a server-generated directory index.
+    """
+
+    key = "directory_listing"
+    _SIGNATURES = (
+        "index of /",
+        "directory listing for",
+        "[to parent directory]",
+        "parent directory</a>",
+    )
+
+    def applies_to(self, finding: Finding) -> bool:  # noqa: ARG002 - always applicable
+        return True
+
+    def probe(self, ctx: ProbeContext, finding: Finding) -> ProbeOutcome:
+        resp = ctx.send("GET")
+        if resp.status == 0:
+            return ProbeOutcome(False, {"check": "directory_listing"}, error=resp.error or "request failed")
+        body = resp.body.lower()
+        signature = next((s for s in self._SIGNATURES if s in body), None)
+        condition_met = signature is not None and 200 <= resp.status < 300
+        return ProbeOutcome(
+            condition_met=condition_met,
+            observation={
+                "check": "directory_listing",
+                "status": resp.status,
+                "listing_detected": condition_met,
+                "signature": signature,
+            },
+        )
+
+
+class ServerVersionProcedure:
+    """Observe whether server/technology versions are disclosed in headers.
+
+    Non-destructive GET. Hypothesis (weakness) = a version number is disclosed
+    (e.g. `Server: nginx/1.2.3`) or a technology banner such as `X-Powered-By`
+    is present.
+    """
+
+    key = "server_version"
+    _VERSION_RE = re.compile(r"\d+\.\d+")
+    _HEADERS = ("Server", "X-Powered-By", "X-AspNet-Version", "X-AspNetMvc-Version", "X-Generator")
+
+    def applies_to(self, finding: Finding) -> bool:  # noqa: ARG002 - always applicable
+        return True
+
+    def probe(self, ctx: ProbeContext, finding: Finding) -> ProbeOutcome:
+        resp = ctx.send("GET")
+        if resp.status == 0:
+            return ProbeOutcome(False, {"check": "server_version"}, error=resp.error or "request failed")
+        disclosures = {h: resp.header(h) for h in self._HEADERS if resp.header(h)}
+        version_disclosed = any(self._VERSION_RE.search(v) for v in disclosures.values())
+        # A bare "Server: nginx" is not itself a finding; a version or a tech
+        # banner (X-Powered-By / X-AspNet*) is.
+        banner = any(k.lower() != "server" for k in disclosures)
+        condition_met = version_disclosed or banner
+        return ProbeOutcome(
+            condition_met=condition_met,
+            observation={
+                "check": "server_version",
+                "disclosures": disclosures,
+                "version_disclosed": version_disclosed,
+                "status": resp.status,
+            },
+        )
+
+
 _DEFAULT_PROCEDURES = {
     SecurityHeaderProcedure.key: SecurityHeaderProcedure(),
     ReflectionProcedure.key: ReflectionProcedure(),
@@ -379,6 +484,9 @@ _DEFAULT_PROCEDURES = {
     CookieFlagsProcedure.key: CookieFlagsProcedure(),
     CorsProcedure.key: CorsProcedure(),
     TlsRedirectProcedure.key: TlsRedirectProcedure(),
+    ClickjackingProcedure.key: ClickjackingProcedure(),
+    DirectoryListingProcedure.key: DirectoryListingProcedure(),
+    ServerVersionProcedure.key: ServerVersionProcedure(),
 }
 
 

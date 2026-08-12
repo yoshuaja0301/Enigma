@@ -22,6 +22,9 @@ _CHECK_MAP = {
     "cookie_flags": (Section.CONFIDENTIALITY, [Control.CONFIDENTIALITY, Control.PRIVACY]),
     "cors": (Section.ACCESS_CONTROL, [Control.CONFIDENTIALITY, Control.SUBJUGATION]),
     "tls_redirect": (Section.CONFIDENTIALITY, [Control.CONFIDENTIALITY, Control.INTEGRITY]),
+    "clickjacking": (Section.INTEGRITY, [Control.INTEGRITY, Control.SUBJUGATION]),
+    "directory_listing": (Section.INFORMATION, [Control.CONFIDENTIALITY]),
+    "server_version": (Section.INFORMATION, [Control.CONFIDENTIALITY]),
 }
 
 _DEFAULT_MAP = (Section.INFORMATION, [Control.CONFIDENTIALITY])

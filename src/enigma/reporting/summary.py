@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from ..findings.model import Verdict
+from ..methodologies.osstmm.rav import compute_rav
 
 
 @dataclass
@@ -26,6 +27,8 @@ class Summary:
     avg_ai_confidence_confirmed: float = 0.0
     avg_ai_confidence_not_confirmed: float = 0.0
     osstmm_coverage: Dict[str, int] = field(default_factory=dict)
+    # OSSTMM RAV, computed from verified observations only.
+    rav: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def confirmation_rate(self) -> float:
@@ -55,6 +58,7 @@ class Summary:
             "avg_ai_confidence_confirmed": round(self.avg_ai_confidence_confirmed, 3),
             "avg_ai_confidence_not_confirmed": round(self.avg_ai_confidence_not_confirmed, 3),
             "osstmm_coverage": self.osstmm_coverage,
+            "rav": self.rav,
         }
 
 
@@ -88,6 +92,7 @@ def summarize(results: List[Any]) -> Summary:
     summary.avg_ai_confidence_confirmed = _mean(conf_confirmed)
     summary.avg_ai_confidence_not_confirmed = _mean(conf_not_confirmed)
     summary.osstmm_coverage = coverage
+    summary.rav = compute_rav(results).to_dict() if results else {}
     return summary
 
 

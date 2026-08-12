@@ -161,7 +161,24 @@ outside its authorized scope.
 |---|---|
 | `CONFIRMED` | Required evidence was obtained and the finding reproduces per procedure. |
 | `NOT_CONFIRMED` | The hypothesis could not be proven with the available verification. |
-| `INCONCLUSIVE` | Data/conditions were insufficient (blocked, skipped, error, or inconsistent). |
+| `INCONCLUSIVE` | Data/conditions were insufficient (blocked, reported, error, or inconsistent). |
+
+### OSSTMM RAV — a measured security score
+
+Beyond per-finding verdicts, Enigma computes an OSSTMM 3 **Risk Assessment
+Value**: arithmetic over the balance of *porosity* (exposed surface), *controls*
+(protections observed working) and *limitations* (verified flaws, weighted by
+category) — not a subjective severity rating.
+
+```
+actual_security = 100 + controls_sum − opsec_sum − limitation_sum
+```
+
+Crucially it is **computed from verified observations only**: `CONFIRMED`
+findings become limitations, `NOT_CONFIRMED` findings evidence a control, and
+unverified findings are excluded *and counted*, so an AI's confidence can never
+move the score. It appears in every report (JSON `summary.rav`, a Markdown
+table, an HTML panel). See [`docs/rav.md`](docs/rav.md).
 
 ### Built-in safe verification procedures
 
@@ -173,6 +190,9 @@ outside its authorized scope.
 | `cookie_flags` | Whether a `Set-Cookie` is missing a flag (`Secure` / `HttpOnly` / `SameSite`). |
 | `cors` | Whether an arbitrary `Origin` is reflected in `Access-Control-Allow-Origin` (worse with credentials). |
 | `tls_redirect` | Whether plain HTTP is upgraded to HTTPS (redirect observed, never followed; notes HSTS). |
+| `clickjacking` | Whether the page is frameable (no `X-Frame-Options`, no CSP `frame-ancestors`). |
+| `directory_listing` | Whether a server-generated directory index is exposed. |
+| `server_version` | Whether server/technology versions are disclosed (`Server`, `X-Powered-By`, …). |
 
 Discovery is **unrestricted** — OpenClaw may report any vulnerability type. A
 finding that matches one of these checks is verified automatically; anything
@@ -222,7 +242,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 110 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 136 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON, MCP + adapter demos
 docs/             architecture, authorization, assessment-model, verification, ...
@@ -234,7 +254,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 110 tests, no external network required
+python3 -m pytest          # 136 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

@@ -228,6 +228,82 @@ def _finding_card(r: Dict[str, Any]) -> str:
     return "".join(parts)
 
 
+_GRADE_CLASS = {
+    "balanced": "confirmed",
+    "adequate": "confirmed",
+    "degraded": "inconclusive",
+    "poor": "inconclusive",
+    "critical": "not-confirmed",
+}
+
+
+def _rav_block(rav: Dict[str, Any]) -> str:
+    """Render the OSSTMM RAV panel."""
+
+    if not rav:
+        return ""
+    porosity = rav.get("porosity", {})
+    controls = rav.get("controls", {})
+    limitations = rav.get("limitations", {})
+    basis = rav.get("basis", {})
+    grade = str(rav.get("grade", ""))
+    cls = _GRADE_CLASS.get(grade, "inconclusive")
+
+    parts: List[str] = ['<h2>OSSTMM RAV — Risk Assessment Value</h2>']
+    parts.append(f'<div class="card {cls}">')
+    parts.append('<div class="card-head">')
+    parts.append(
+        f'<span class="badge {cls}">Actual Security {escape(str(rav.get("actual_security")))}%</span>'
+    )
+    parts.append(f'<span class="title">{escape(grade)}</span>')
+    parts.append(f'<span class="fid">deficit {escape(str(rav.get("security_deficit")))}%</span>')
+    parts.append("</div>")
+
+    parts.append('<div class="bars">')
+    parts.append(_bar("True Protection", (rav.get("true_protection") or 0) / 100.0, "enigma"))
+    parts.append(_bar("True Coverage", (rav.get("true_coverage") or 0) / 100.0, "ai"))
+    parts.append("</div>")
+
+    parts.append('<div class="meta">')
+    parts.append(
+        f'<div><div class="k">Porosity (OpSec)</div><div class="v">{escape(str(porosity.get("total", 0)))}'
+        f' <span class="k">(vis {escape(str(porosity.get("visibility", 0)))} · '
+        f'acc {escape(str(porosity.get("access", 0)))} · '
+        f'trust {escape(str(porosity.get("trust", 0)))})</span></div></div>'
+    )
+    parts.append(
+        f'<div><div class="k">Controls evidenced</div><div class="v">'
+        f'{escape(str(controls.get("total", 0)))} / 10</div></div>'
+    )
+    parts.append(
+        f'<div><div class="k">Limitations (verified)</div><div class="v">'
+        f'{escape(str(limitations.get("total", 0)))}</div></div>'
+    )
+    parts.append(
+        f'<div><div class="k">Excluded (unverified)</div><div class="v">'
+        f'{escape(str(rav.get("excluded_unverified", 0)))}</div></div>'
+    )
+    parts.append("</div>")
+
+    chips: List[str] = []
+    for cat, count in sorted((limitations.get("counts") or {}).items()):
+        chips.append(f'<span class="chip">{escape(cat)}: {escape(str(count))}</span>')
+    for missing in (controls.get("missing") or [])[:5]:
+        chips.append(f'<span class="chip">missing control: {escape(str(missing))}</span>')
+    if chips:
+        parts.append('<div class="chips">' + "".join(chips) + "</div>")
+
+    if basis.get("formula"):
+        parts.append(f'<div class="reason mono">{escape(str(basis["formula"]))}</div>')
+    parts.append(
+        '<div class="reason">Computed from <strong>verified observations only</strong>: '
+        "CONFIRMED findings become limitations, NOT_CONFIRMED findings evidence a control, "
+        "and unverified findings are excluded and counted separately.</div>"
+    )
+    parts.append("</div>")
+    return "".join(parts)
+
+
 def _coverage_block(coverage: Dict[str, Any]) -> str:
     if not coverage:
         return ""
@@ -258,6 +334,7 @@ def render_report_html(
         body.append(f'<div class="subtitle">{escape(subtitle)}</div>')
 
     body.append(_summary_block(summary))
+    body.append(_rav_block(summary.get("rav", {})))
 
     body.append("<h2>Findings</h2>")
     if results:

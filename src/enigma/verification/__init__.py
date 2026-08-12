@@ -2,9 +2,12 @@
 
 from .engine import (
     BlockedError,
+    ClickjackingProcedure,
     CookieFlagsProcedure,
     CorsProcedure,
+    DirectoryListingProcedure,
     HttpMethodProcedure,
+    ServerVersionProcedure,
     ProbeContext,
     ProbeOutcome,
     ReflectionProcedure,
@@ -29,6 +32,9 @@ __all__ = [
     "CookieFlagsProcedure",
     "CorsProcedure",
     "TlsRedirectProcedure",
+    "ClickjackingProcedure",
+    "DirectoryListingProcedure",
+    "ServerVersionProcedure",
     "Transport",
     "UrllibTransport",
     "FakeTransport",

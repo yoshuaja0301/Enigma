@@ -33,6 +33,9 @@ _CHECK_PARAMS = {
     },
     "cors": {"origin": "optional: an Origin to test for reflection (default a benign probe origin)"},
     "tls_redirect": {},
+    "clickjacking": {},
+    "directory_listing": {},
+    "server_version": {},
 }
 
 

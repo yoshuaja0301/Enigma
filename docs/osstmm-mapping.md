@@ -31,7 +31,17 @@ Web assessment lives in the **COMSEC / Data Networks** channel.
 | `cookie_flags` | Confidentiality | Confidentiality, Privacy |
 | `cors` | Access Control | Confidentiality, Subjugation |
 | `tls_redirect` | Confidentiality | Confidentiality, Integrity |
+| `clickjacking` | Integrity | Integrity, Subjugation |
+| `directory_listing` | Information Leakage | Confidentiality |
+| `server_version` | Information Leakage | Confidentiality |
 | *(default / unknown)* | Information Leakage | Confidentiality |
+
+## RAV (Risk Assessment Value)
+
+The mapping above places a finding in the taxonomy; the **RAV** turns the whole
+assessment into a measured security score using OSSTMM's porosity / controls /
+limitations model. It is computed from verified observations only. See
+[rav.md](rav.md).
 
 The mapping is keyed on the verification `check`, so it stays stable regardless
 of the free-text title an AI produced.

@@ -26,6 +26,9 @@ using controlled, non-destructive probes, then issues a verdict.
 | `cookie_flags` | GET | `Set-Cookie` missing a flag | `flag` (`Secure`/`HttpOnly`/`SameSite`), optional `cookie` |
 | `cors` | GET + `Origin` header | arbitrary `Origin` reflected (or `*`) in `Access-Control-Allow-Origin` | optional `origin` |
 | `tls_redirect` | GET (http:// variant) | HTTP not upgraded to HTTPS | — |
+| `clickjacking` | GET | page is frameable (no `X-Frame-Options`, no CSP `frame-ancestors`) | — |
+| `directory_listing` | GET | a server-generated directory index is exposed | — |
+| `server_version` | GET | server/technology version disclosed in headers | — |
 
 All procedures are strictly observational, non-destructive, and read-oriented:
 
