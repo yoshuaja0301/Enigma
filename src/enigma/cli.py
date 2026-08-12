@@ -18,11 +18,14 @@ import argparse
 import sys
 from typing import List, Optional
 
+import os
+
 from .agent.openclaw import StaticOpenClawAdapter
 from .authorization.validator import AuthorizationValidator
 from .controller import AssessmentController
 from .core.configuration import load_assessment
 from .reporting import to_json, to_markdown
+from .service import EnigmaService
 from .verification.http import FakeTransport
 
 
@@ -56,6 +59,33 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    from .integrations.http_api import run_server
+
+    transport = FakeTransport() if args.offline else None
+    service = EnigmaService(
+        transport=transport,
+        evidence_dir=args.evidence_dir,
+        allowed_hosts=args.allow_host or None,
+    )
+    token = args.token or os.environ.get("ENIGMA_API_TOKEN")
+    run_server(host=args.host, port=args.port, service=service, token=token)
+    return 0
+
+
+def _cmd_mcp(args: argparse.Namespace) -> int:
+    from .integrations.mcp_server import EnigmaMcpServer
+
+    transport = FakeTransport() if args.offline else None
+    service = EnigmaService(
+        transport=transport,
+        evidence_dir=args.evidence_dir,
+        allowed_hosts=args.allow_host or None,
+    )
+    EnigmaMcpServer(service=service).serve_stdio()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="enigma",
@@ -78,6 +108,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="use a fake transport (no network); useful for demos and dry runs",
     )
     p_verify.set_defaults(func=_cmd_verify)
+
+    p_serve = sub.add_parser("serve", help="run the REST + webhook API server")
+    p_serve.add_argument("--host", default="127.0.0.1", help="bind host (default 127.0.0.1)")
+    p_serve.add_argument("--port", type=int, default=8737, help="bind port (default 8737)")
+    p_serve.add_argument("--token", default=None, help="bearer token (or set ENIGMA_API_TOKEN)")
+    p_serve.add_argument("--evidence-dir", default=None, help="directory to persist sanitized evidence")
+    p_serve.add_argument(
+        "--allow-host",
+        action="append",
+        default=[],
+        help="server-side host allowlist (repeatable); blocks targets outside it",
+    )
+    p_serve.add_argument("--offline", action="store_true", help="use a fake transport (no network)")
+    p_serve.set_defaults(func=_cmd_serve)
+
+    p_mcp = sub.add_parser("mcp", help="run the MCP server over stdio (for AI agents)")
+    p_mcp.add_argument("--evidence-dir", default=None, help="directory to persist sanitized evidence")
+    p_mcp.add_argument(
+        "--allow-host",
+        action="append",
+        default=[],
+        help="server-side host allowlist (repeatable)",
+    )
+    p_mcp.add_argument("--offline", action="store_true", help="use a fake transport (no network)")
+    p_mcp.set_defaults(func=_cmd_mcp)
 
     return parser
 

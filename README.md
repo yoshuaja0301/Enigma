@@ -98,6 +98,28 @@ reproducibility flag, sanitized evidence id and an OSSTMM mapping.
 
 ---
 
+## Connecting OpenClaw
+
+OpenClaw can connect through whatever surface fits its stack — all of them wrap
+the same `EnigmaService` facade, so the JSON contract is identical, and the
+authorization-first gate always applies.
+
+| Surface | How | Best for |
+|---|---|---|
+| **In-process adapter** | implement `OpenClawAdapter.get_findings` | same pipeline/process |
+| **REST + webhook API** | `enigma serve` → `POST /verify`, `/webhook/openclaw`, `GET /results/{id}` | any HTTP client; async push via `callback_url` |
+| **MCP server** | `enigma mcp` (JSON-RPC over stdio; tools `validate_scope`, `verify_findings`, `get_result`) | AI agents that speak MCP |
+| **Client SDK** | `enigma.integrations.client.EnigmaClient` | Python consumers of the REST API |
+
+```bash
+enigma serve --port 8737 --token SECRET --allow-host authorized-target.example
+enigma mcp   --allow-host authorized-target.example      # for an AI agent
+```
+
+Safety for exposed deployments: set a bearer token (`--token` / `ENIGMA_API_TOKEN`)
+and a server-side host allowlist (`--allow-host`) so an endpoint can't be turned
+into a general-purpose scanner. See [`docs/integration.md`](docs/integration.md).
+
 ## Pipeline
 
 ```
@@ -154,9 +176,11 @@ src/enigma/
   evidence/       collector, sanitizer, store
   methodologies/  OSSTMM taxonomy, controls, mapper
   reporting/      json, markdown, summary/metrics
+  service.py      transport-agnostic facade shared by every surface
+  integrations/   REST + webhook API, MCP server, client SDK
   controller.py   end-to-end orchestration
-  cli.py          `enigma validate` / `enigma verify`
-tests/            unit + integration (local HTTP server) — 51 tests
+  cli.py          `enigma validate` / `verify` / `serve` / `mcp`
+tests/            unit + integration (local HTTP server, REST API, MCP) — 71 tests
 examples/         assessment / findings / verification-result JSON
 docs/             architecture, authorization, verification, evidence, osstmm...
 ```
@@ -166,7 +190,7 @@ docs/             architecture, authorization, verification, evidence, osstmm...
 ## Tests
 
 ```bash
-python3 -m pytest          # 51 tests, no network required
+python3 -m pytest          # 71 tests, no external network required
 ```
 
 The integration suite spins up a throwaway local HTTP server on `127.0.0.1` and

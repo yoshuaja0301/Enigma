@@ -23,6 +23,7 @@ from .core.target import Target
 from .findings.model import Finding, Verdict
 from .findings.normalizer import FindingNormalizer
 from .methodologies.osstmm import OsstmmMapper
+from .service import EnigmaService
 from .verification.engine import VerificationEngine, VerificationResult
 
 __version__ = "0.1.0"
@@ -45,4 +46,5 @@ __all__ = [
     "VerificationResult",
     "OsstmmMapper",
     "AssessmentController",
+    "EnigmaService",
 ]
