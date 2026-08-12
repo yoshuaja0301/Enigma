@@ -68,13 +68,15 @@ enigma verify \
 ```
 
 Against a real, authorized target, drop `--offline` and (optionally) persist
-sanitized evidence:
+sanitized evidence. Reports render as `md`, `json`, or a self-contained
+**`html`** page (theme-aware, no dependencies) — write it to a file with
+`--output`:
 
 ```bash
 enigma verify \
   --assessment examples/assessment.json \
   --findings   examples/findings.json \
-  --format json --evidence-dir ./evidence
+  --format html --output report.html --evidence-dir ./evidence
 ```
 
 ---
@@ -107,7 +109,7 @@ authorization-first gate always applies.
 | Surface | How | Best for |
 |---|---|---|
 | **In-process adapter** | implement `OpenClawAdapter.get_findings` | same pipeline/process |
-| **REST + webhook API** | `enigma serve` → `POST /verify`, `/webhook/openclaw`, `GET /results/{id}` | any HTTP client; async push via `callback_url` |
+| **REST + webhook API** | `enigma serve` → `POST /verify`, `/webhook/openclaw`, `GET /results/{id}`, plus an HTML **dashboard** at `/` and `/report/{id}` | any HTTP client; async push via `callback_url`; browser dashboard |
 | **MCP server** | `enigma mcp` (JSON-RPC over stdio; tools `validate_scope`, `verify_findings`, `get_result`) | AI agents that speak MCP |
 | **Client SDK** | `enigma.integrations.client.EnigmaClient` | Python consumers of the REST API |
 
@@ -182,12 +184,12 @@ src/enigma/
   verification/   engine, safe procedures, HTTP transport, reproducibility
   evidence/       collector, sanitizer, store
   methodologies/  OSSTMM taxonomy, controls, mapper
-  reporting/      json, markdown, summary/metrics
+  reporting/      json, markdown, html (report + dashboard), summary/metrics
   service.py      transport-agnostic facade shared by every surface
-  integrations/   REST + webhook API, MCP server, client SDK
+  integrations/   REST + webhook API + HTML dashboard, MCP server, client SDK
   controller.py   end-to-end orchestration
   cli.py          `enigma validate` / `verify` / `serve` / `mcp`
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 73 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 79 tests
 examples/         assessment / findings / verification-result JSON
 docs/             architecture, authorization, verification, evidence, osstmm...
 ```
@@ -197,7 +199,7 @@ docs/             architecture, authorization, verification, evidence, osstmm...
 ## Tests
 
 ```bash
-python3 -m pytest          # 73 tests, no external network required
+python3 -m pytest          # 79 tests, no external network required
 ```
 
 The integration suite spins up a throwaway local HTTP server on `127.0.0.1` and

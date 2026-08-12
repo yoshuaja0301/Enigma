@@ -24,7 +24,7 @@ from .agent.openclaw import StaticOpenClawAdapter
 from .authorization.validator import AuthorizationValidator
 from .controller import AssessmentController
 from .core.configuration import load_assessment
-from .reporting import to_json, to_markdown
+from .reporting import to_html, to_json, to_markdown
 from .service import EnigmaService
 from .verification.http import FakeTransport
 
@@ -53,9 +53,18 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     results = controller.run(assessment, adapter)
 
     if args.format == "json":
-        print(to_json(results))
+        rendered = to_json(results)
+    elif args.format == "html":
+        rendered = to_html(results, subtitle=f"Assessment {assessment.assessment_id} · target {assessment.target.url}")
     else:
-        print(to_markdown(results))
+        rendered = to_markdown(results)
+
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as handle:
+            handle.write(rendered)
+        print(f"wrote {args.format} report to {args.output}")
+    else:
+        print(rendered)
     return 0
 
 
@@ -100,7 +109,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_verify = sub.add_parser("verify", help="verify findings for an assessment")
     p_verify.add_argument("--assessment", required=True, help="path to assessment JSON")
     p_verify.add_argument("--findings", required=True, help="path to findings JSON (list or {findings:[...]})")
-    p_verify.add_argument("--format", choices=["json", "md"], default="md", help="report format")
+    p_verify.add_argument("--format", choices=["json", "md", "html"], default="md", help="report format")
+    p_verify.add_argument("--output", default=None, help="write the report to a file instead of stdout")
     p_verify.add_argument("--evidence-dir", default=None, help="directory to persist sanitized evidence")
     p_verify.add_argument(
         "--offline",

@@ -26,6 +26,7 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, Optional
 
+from ..reporting.html import render_dashboard_html, render_report_html
 from ..service import EnigmaService, ServerScopeError
 from . import http_post_json
 
@@ -76,6 +77,14 @@ def _make_handler(service: EnigmaService, token: Optional[str]):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_html(self, status: int, html: str) -> None:
+            body = html.encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def _authorized(self) -> bool:
             if not token:
                 return True
@@ -107,6 +116,21 @@ def _make_handler(service: EnigmaService, token: Optional[str]):
                 return
             if not self._authorized():
                 self._send(401, {"error": "unauthorized"})
+                return
+            if self.path in ("/", "/dashboard"):
+                entries = [
+                    {"assessment_id": aid, "summary": (service.get_result(aid) or {}).get("summary", {})}
+                    for aid in service.list_results()
+                ]
+                self._send_html(200, render_dashboard_html(entries))
+                return
+            if self.path.startswith("/report/"):
+                assessment_id = self.path[len("/report/"):]
+                report = service.get_result(assessment_id)
+                if report is None:
+                    self._send_html(404, render_dashboard_html([]))
+                else:
+                    self._send_html(200, render_report_html(report, subtitle=f"Assessment {assessment_id}"))
                 return
             if self.path.startswith("/results/"):
                 assessment_id = self.path[len("/results/"):]

@@ -43,10 +43,12 @@ enigma serve --host 127.0.0.1 --port 8737 \
 | Method & path | Body | Returns |
 |---|---|---|
 | `GET /health` | — | liveness + whether auth/allowlist are enabled |
+| `GET /` or `/dashboard` | — | HTML dashboard listing stored assessments |
 | `POST /validate` | `{assessment}` | gate decision (`allowed`, `stage`, `reason`) |
-| `POST /verify` | `{assessment, findings, callback_url?}` | full report |
+| `POST /verify` | `{assessment, findings, callback_url?}` | full report (JSON) |
 | `POST /webhook/openclaw` | same as `/verify` | full report (push alias) |
-| `GET /results/{assessment_id}` | — | last stored report |
+| `GET /results/{assessment_id}` | — | last stored report (JSON) |
+| `GET /report/{assessment_id}` | — | last stored report (HTML page) |
 
 - **Auth:** if a token is set, every route except `/health` requires
   `Authorization: Bearer <token>`.

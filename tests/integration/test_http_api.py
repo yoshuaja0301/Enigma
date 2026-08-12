@@ -2,6 +2,7 @@
 
 import threading
 import unittest
+from urllib.request import urlopen
 
 from enigma.integrations.client import EnigmaClient
 from enigma.integrations.http_api import create_server
@@ -64,6 +65,22 @@ class HttpApiTests(unittest.TestCase):
     def test_unknown_result_404(self):
         result = self.client.get_result("NOPE")
         self.assertEqual(result.get("status_code"), 404)
+
+    def test_dashboard_and_html_report(self):
+        base = f"http://127.0.0.1:{self.port}"
+        self.client.verify(ASSESSMENT, FINDINGS)  # ensure a stored result exists
+
+        with urlopen(f"{base}/") as resp:
+            self.assertEqual(resp.headers.get_content_type(), "text/html")
+            dashboard = resp.read().decode()
+        self.assertIn("ASM-API", dashboard)
+        self.assertIn("/report/ASM-API", dashboard)
+
+        with urlopen(f"{base}/report/ASM-API") as resp:
+            self.assertEqual(resp.headers.get_content_type(), "text/html")
+            report_html = resp.read().decode()
+        self.assertTrue(report_html.lstrip().lower().startswith("<!doctype html>"))
+        self.assertIn("Confirmed", report_html)
 
 
 class HttpApiAuthTests(unittest.TestCase):
