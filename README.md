@@ -132,15 +132,26 @@ into a general-purpose scanner. See [`docs/integration.md`](docs/integration.md)
 ## Pipeline
 
 ```
-OpenClaw findings
-   → normalize            (findings/normalizer.py)
-   → authorization gate   (authorization/validator.py: authorization → scope → policy)
-   → verification         (verification/engine.py + safe procedures)
-   → reproducibility      (verification/reproducibility.py)
-   → evidence (sanitized) (evidence/*)
-   → OSSTMM mapping       (methodologies/osstmm/*)
-   → report / summary     (reporting/*)
+Assessment                     core/           target + authorization + scope + profile
+   ↓
+Authorization / Scope / Policy authorization/  authorization → scope → policy   (gate)
+   ↓
+OpenClaw Finding               agent/          AI proposes a POTENTIAL finding
+   ↓
+Finding Normalizer             findings/       raw proposal → consistent Finding schema
+   ↓
+Verification Engine            verification/   controlled safe probes + reproducibility
+   ↓                                           (the gate is re-checked before every probe)
+Evidence                       evidence/       sanitized, reviewable artifacts
+   ↓
+OSSTMM Mapping                 methodologies/  channel / section / operational controls
+   ↓
+Verdict + Report               reporting/      CONFIRMED / NOT_CONFIRMED / INCONCLUSIVE
 ```
+
+The gate is established from the **Assessment** up front and enforced *inside*
+the Verification Engine on every probe — so a finding can never cause a request
+outside its authorized scope.
 
 ### Verdict model
 
