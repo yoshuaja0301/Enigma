@@ -142,6 +142,7 @@ def _summary_block(summary: Dict[str, Any]) -> str:
         _kpi(summary.get("confirmed", 0), "Confirmed", "ok"),
         _kpi(summary.get("not_confirmed", 0), "Not confirmed", "bad"),
         _kpi(summary.get("inconclusive", 0), "Inconclusive", "warn"),
+        _kpi(summary.get("needs_manual_review", 0), "Manual review", "warn"),
         _kpi(summary.get("blocked", 0), "Blocked", "neutral"),
         _kpi(summary.get("reproducible", 0), "Reproducible"),
         _kpi(f"{conf_rate}%", "Confirmation rate", "ok"),

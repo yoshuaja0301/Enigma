@@ -31,7 +31,14 @@ _CHECK_PARAMS = {
 
 
 def build_openclaw_request(assessment: Assessment) -> Dict[str, Any]:
-    """A structured payload describing the target for an HTTP OpenClaw service."""
+    """A structured payload describing the target for an HTTP OpenClaw service.
+
+    Discovery is unrestricted: OpenClaw may propose ANY kind of potential
+    vulnerability. Findings that map to a supported ``check`` are verified
+    automatically; anything else is still recorded (as ``needs_manual_review``)
+    and never dropped. Restricting *discovery* to the supported checks would
+    hide real findings, so we don't.
+    """
 
     return {
         "assessment_id": assessment.assessment_id,
@@ -41,15 +48,17 @@ def build_openclaw_request(assessment: Assessment) -> Dict[str, Any]:
             "excluded_paths": assessment.scope.excluded_paths,
         },
         "profile": assessment.profile.value,
-        # Only these checks can be verified — ask OpenClaw to stay within them.
-        "supported_checks": sorted(KNOWN_CHECKS),
+        # Checks Enigma can verify automatically. NOT a limit on what OpenClaw
+        # may report — findings outside this set are kept for manual review.
+        "auto_verifiable_checks": sorted(KNOWN_CHECKS),
         "finding_schema": {
             "finding_id": "string",
             "title": "string",
-            "category": "string",
+            "category": "string (any vulnerability type, e.g. sqli, idor, xss, auth-bypass, logic-flaw)",
+            "description": "string (why you suspect it; evidence you observed)",
             "confidence": "0.0-1.0",
             "target": {"path": "string"},
-            "check": f"one of: {', '.join(sorted(KNOWN_CHECKS))}",
+            "check": f"OPTIONAL — one of {', '.join(sorted(KNOWN_CHECKS))} if it applies, else omit",
             "parameters": _CHECK_PARAMS,
         },
     }
@@ -60,14 +69,19 @@ def build_openclaw_prompt(assessment: Assessment) -> str:
 
     request = build_openclaw_request(assessment)
     return (
-        "You are OpenClaw, an AI web-security assessor. Propose POTENTIAL findings "
-        "for the authorized target below. You do not decide authorization or scope, "
-        "and you must only propose findings that map to one of the supported checks "
-        "so they can be independently verified.\n\n"
+        "You are OpenClaw, an AI web-security assessor. Hunt broadly and propose "
+        "ANY potential vulnerability you find on the authorized target below — do "
+        "not limit yourself to a fixed list of categories. You do not decide "
+        "authorization or scope; Enigma verifies everything you report.\n\n"
+        "For a finding that matches one of the auto-verifiable checks, include the "
+        "'check' and 'parameters' so Enigma can prove it automatically. For any "
+        "other finding, just describe it — Enigma will record it for manual "
+        "verification. Never omit a real finding merely because no automatic "
+        "check exists for it.\n\n"
         f"Target: {assessment.target.url}\n"
         f"In-scope hosts: {', '.join(assessment.scope.allowed_hosts) or assessment.target.host}\n"
-        f"Excluded paths: {', '.join(assessment.scope.excluded_paths) or '(none)'}\n"
-        f"Supported checks: {', '.join(sorted(KNOWN_CHECKS))}\n\n"
+        f"Excluded paths (do not target): {', '.join(assessment.scope.excluded_paths) or '(none)'}\n"
+        f"Auto-verifiable checks: {', '.join(sorted(KNOWN_CHECKS))}\n\n"
         "Respond with ONLY a JSON array of finding objects using this schema:\n"
         f"{json.dumps(request['finding_schema'], indent=2)}\n"
     )

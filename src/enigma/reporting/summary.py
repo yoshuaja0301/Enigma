@@ -22,6 +22,7 @@ class Summary:
     inconclusive: int = 0
     blocked: int = 0
     reproducible: int = 0
+    needs_manual_review: int = 0
     avg_ai_confidence_confirmed: float = 0.0
     avg_ai_confidence_not_confirmed: float = 0.0
     osstmm_coverage: Dict[str, int] = field(default_factory=dict)
@@ -47,6 +48,7 @@ class Summary:
             "inconclusive": self.inconclusive,
             "blocked": self.blocked,
             "reproducible": self.reproducible,
+            "needs_manual_review": self.needs_manual_review,
             "confirmation_rate": round(self.confirmation_rate, 3),
             "false_positive_rate": round(self.false_positive_rate, 3),
             "inconclusive_rate": round(self.inconclusive_rate, 3),
@@ -67,6 +69,8 @@ def summarize(results: List[Any]) -> Summary:
             summary.blocked += 1
         if result.reproducible:
             summary.reproducible += 1
+        if result.status == "needs_manual_review":
+            summary.needs_manual_review += 1
 
         if result.verdict is Verdict.CONFIRMED:
             summary.confirmed += 1

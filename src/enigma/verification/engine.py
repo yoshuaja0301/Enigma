@@ -84,6 +84,7 @@ class VerificationResult:
                 "category": self.finding.category,
                 "check": self.finding.check,
                 "title": self.finding.title,
+                "description": self.finding.description,
                 "ai_confidence": round(self.finding.confidence, 2),
             },
             "verification": {
@@ -277,16 +278,20 @@ class VerificationEngine:
 
         procedure = self._procedures.get(finding.check) if finding.check else None
         if procedure is None:
+            # OpenClaw is free to report any finding type. One without a safe
+            # automated check is NOT dropped — it is kept for a human to verify.
             return self._skipped(
                 assessment,
                 finding,
-                reason=f"no verification procedure for check={finding.check!r}",
+                reason="no automated verification for this finding type; recorded for manual review",
+                status="needs_manual_review",
             )
         if not procedure.applies_to(finding):
             return self._skipped(
                 assessment,
                 finding,
                 reason=f"procedure '{finding.check}' requires additional parameters",
+                status="needs_manual_review",
             )
 
         ctx = ProbeContext(assessment, validator, self._transport, profile, finding)
@@ -403,14 +408,20 @@ class VerificationEngine:
             reason=f"ASSESSMENT BLOCKED ({decision.stage.value}): {decision.reason}",
         )
 
-    def _skipped(self, assessment: Assessment, finding: Finding, reason: str) -> VerificationResult:
+    def _skipped(
+        self,
+        assessment: Assessment,
+        finding: Finding,
+        reason: str,
+        status: str = "skipped",
+    ) -> VerificationResult:
         return VerificationResult(
             assessment_id=assessment.assessment_id,
             finding=finding,
             verdict=Verdict.INCONCLUSIVE,
             confidence=0.3,
             reproducible=False,
-            status="skipped",
+            status=status,
             procedure=finding.check,
             observations=[],
             probes_run=0,

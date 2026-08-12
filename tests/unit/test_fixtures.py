@@ -83,9 +83,10 @@ class FixtureNormalizationTests(unittest.TestCase):
         self.assertEqual(by_id["OC-100"].verdict, Verdict.CONFIRMED)      # CSP absent
         self.assertEqual(by_id["OC-104"].verdict, Verdict.CONFIRMED)      # XFO absent
         self.assertEqual(by_id["OC-101"].verdict, Verdict.NOT_CONFIRMED)  # no reflection
-        # Unknown category -> no safe procedure -> skipped, never probed unsafely.
+        # Unknown category -> no safe procedure -> kept for manual review, never
+        # dropped and never probed unsafely.
         self.assertEqual(by_id["OC-103"].verdict, Verdict.INCONCLUSIVE)
-        self.assertEqual(by_id["OC-103"].status, "skipped")
+        self.assertEqual(by_id["OC-103"].status, "needs_manual_review")
 
         # Every result carries an OSSTMM mapping.
         for result in results:

@@ -27,6 +27,7 @@ def to_markdown(results: List[Any], summary: Optional[Summary] = None, title: st
     lines.append(f"| CONFIRMED | {summary.confirmed} |")
     lines.append(f"| NOT_CONFIRMED | {summary.not_confirmed} |")
     lines.append(f"| INCONCLUSIVE | {summary.inconclusive} |")
+    lines.append(f"| Needs manual review | {summary.needs_manual_review} |")
     lines.append(f"| Blocked | {summary.blocked} |")
     lines.append(f"| Reproducible | {summary.reproducible} |")
     lines.append(f"| Confirmation rate | {summary.confirmation_rate:.0%} |")
