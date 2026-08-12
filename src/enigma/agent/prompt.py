@@ -41,9 +41,9 @@ def build_openclaw_request(assessment: Assessment) -> Dict[str, Any]:
 
     Discovery is unrestricted: OpenClaw may propose ANY kind of potential
     vulnerability. Findings that map to a supported ``check`` are verified
-    automatically; anything else is still recorded (as ``needs_manual_review``)
-    and never dropped. Restricting *discovery* to the supported checks would
-    hide real findings, so we don't.
+    automatically; anything else is still recorded (status ``reported``) and
+    never dropped. Restricting *discovery* to the supported checks would hide
+    real findings, so we don't.
     """
 
     return {
@@ -55,7 +55,7 @@ def build_openclaw_request(assessment: Assessment) -> Dict[str, Any]:
         },
         "profile": assessment.profile.value,
         # Checks Enigma can verify automatically. NOT a limit on what OpenClaw
-        # may report — findings outside this set are kept for manual review.
+        # may report — findings outside this set are recorded as "reported".
         "auto_verifiable_checks": sorted(KNOWN_CHECKS),
         "finding_schema": {
             "finding_id": "string",
@@ -81,9 +81,9 @@ def build_openclaw_prompt(assessment: Assessment) -> str:
         "authorization or scope; Enigma verifies everything you report.\n\n"
         "For a finding that matches one of the auto-verifiable checks, include the "
         "'check' and 'parameters' so Enigma can prove it automatically. For any "
-        "other finding, just describe it — Enigma will record it for manual "
-        "verification. Never omit a real finding merely because no automatic "
-        "check exists for it.\n\n"
+        "other finding, just describe it — Enigma will record it (status "
+        "'reported') for a reviewer. Never omit a real finding merely because no "
+        "automatic check exists for it.\n\n"
         f"Target: {assessment.target.url}\n"
         f"In-scope hosts: {', '.join(assessment.scope.allowed_hosts) or assessment.target.host}\n"
         f"Excluded paths (do not target): {', '.join(assessment.scope.excluded_paths) or '(none)'}\n"

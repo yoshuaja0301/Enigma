@@ -176,7 +176,8 @@ outside its authorized scope.
 
 Discovery is **unrestricted** — OpenClaw may report any vulnerability type. A
 finding that matches one of these checks is verified automatically; anything
-else is kept as `needs_manual_review` (never dropped, never probed unsafely).
+else is kept with status `reported` (never dropped, never probed unsafely) for a
+reviewer to pick up.
 
 ---
 

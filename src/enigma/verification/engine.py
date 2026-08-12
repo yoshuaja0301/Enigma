@@ -411,19 +411,19 @@ class VerificationEngine:
         procedure = self._procedures.get(finding.check) if finding.check else None
         if procedure is None:
             # OpenClaw is free to report any finding type. One without a safe
-            # automated check is NOT dropped — it is kept for a human to verify.
+            # automated check is NOT dropped — it is recorded as reported.
             return self._skipped(
                 assessment,
                 finding,
-                reason="no automated verification for this finding type; recorded for manual review",
-                status="needs_manual_review",
+                reason="no automatic check for this finding type; reported for review",
+                status="reported",
             )
         if not procedure.applies_to(finding):
             return self._skipped(
                 assessment,
                 finding,
                 reason=f"procedure '{finding.check}' requires additional parameters",
-                status="needs_manual_review",
+                status="reported",
             )
 
         ctx = ProbeContext(assessment, validator, self._transport, profile, finding)

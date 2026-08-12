@@ -113,13 +113,13 @@ class VerificationEngineTests(unittest.TestCase):
         self.assertTrue(result.blocked)
         self.assertEqual(transport.exchanges, [])
 
-    def test_no_procedure_is_kept_for_manual_review(self):
+    def test_no_procedure_is_reported_not_dropped(self):
         engine = VerificationEngine(transport=FakeTransport())
         finding = Finding(finding_id="F-9", check=None, target_path="/cart")
         result = engine.verify(assessment(), finding)
-        # A free-form finding with no automated check is NOT dropped — it is kept
-        # for a human to verify.
-        self.assertEqual(result.status, "needs_manual_review")
+        # A free-form finding with no automatic check is NOT dropped — it is
+        # recorded as "reported" for a human to review.
+        self.assertEqual(result.status, "reported")
         self.assertEqual(result.verdict, Verdict.INCONCLUSIVE)
 
     def test_network_error_is_inconclusive(self):
