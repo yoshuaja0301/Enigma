@@ -1,0 +1,42 @@
+{
+  "findings": [
+    {
+      "finding_id": "F-00017",
+      "type": "potential_vulnerability",
+      "category": "missing_security_header",
+      "title": "Content-Security-Policy header appears to be missing",
+      "confidence": 0.76,
+      "target": { "host": "authorized-target.example", "path": "/search" },
+      "check": "security_header",
+      "parameters": { "header": "Content-Security-Policy" }
+    },
+    {
+      "finding_id": "F-00018",
+      "type": "potential_vulnerability",
+      "category": "reflected_input",
+      "title": "Query parameter may be reflected in the response",
+      "confidence": 0.81,
+      "target": { "host": "authorized-target.example", "path": "/search" },
+      "check": "reflection",
+      "parameters": { "param": "q" }
+    },
+    {
+      "finding_id": "F-00019",
+      "type": "potential_vulnerability",
+      "category": "http_method",
+      "title": "TRACE method may be enabled",
+      "confidence": 0.55,
+      "target": { "host": "authorized-target.example", "path": "/" },
+      "check": "http_method",
+      "parameters": { "method": "TRACE" }
+    },
+    {
+      "finding_id": "F-00020",
+      "type": "potential_vulnerability",
+      "category": "business_logic",
+      "title": "Possible logic flaw with no safe automated check",
+      "confidence": 0.6,
+      "target": { "host": "authorized-target.example", "path": "/cart" }
+    }
+  ]
+}

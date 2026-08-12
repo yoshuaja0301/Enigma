@@ -1,0 +1,22 @@
+{
+  "assessment_id": "ASM-00001",
+  "target": {
+    "url": "https://authorized-target.example"
+  },
+  "authorization": {
+    "status": "authorized",
+    "reference": "ROE-2026-0007",
+    "authorized_by": "target-owner"
+  },
+  "scope": {
+    "allowed_hosts": [
+      "authorized-target.example"
+    ],
+    "excluded_paths": [
+      "/logout",
+      "/account/delete"
+    ]
+  },
+  "profile": "safe_verification",
+  "methodology": "OSSTMM"
+}

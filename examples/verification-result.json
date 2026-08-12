@@ -1,0 +1,39 @@
+{
+  "assessment_id": "ASM-00001",
+  "finding_id": "F-00017",
+  "verdict": "CONFIRMED",
+  "confidence": 0.94,
+  "reproducible": true,
+  "target": {
+    "host": "authorized-target.example",
+    "path": "/search"
+  },
+  "finding": {
+    "type": "potential_vulnerability",
+    "category": "missing_security_header",
+    "check": "security_header",
+    "title": "Content-Security-Policy header appears to be missing",
+    "ai_confidence": 0.76
+  },
+  "verification": {
+    "status": "completed",
+    "procedure": "security_header",
+    "probes_run": 2,
+    "observations": [
+      { "check": "security_header", "header": "Content-Security-Policy", "present": false, "status": 200 },
+      { "check": "security_header", "header": "Content-Security-Policy", "present": false, "status": 200 }
+    ],
+    "reason": "condition consistently observed across probes"
+  },
+  "evidence": {
+    "evidence_id": "EV-00017"
+  },
+  "methodology": {
+    "name": "OSSTMM",
+    "channel": "COMSEC/Data Networks",
+    "section": "Configuration & Hardening",
+    "controls": ["Confidentiality", "Integrity"],
+    "verdict": "CONFIRMED",
+    "vector": "authorized-target.example/search"
+  }
+}

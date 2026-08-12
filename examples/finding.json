@@ -1,0 +1,17 @@
+{
+  "finding_id": "F-00017",
+  "type": "potential_vulnerability",
+  "category": "missing_security_header",
+  "title": "Content-Security-Policy header appears to be missing",
+  "description": "OpenClaw observed responses without a Content-Security-Policy header.",
+  "confidence": 0.76,
+  "target": {
+    "host": "authorized-target.example",
+    "path": "/search"
+  },
+  "check": "security_header",
+  "parameters": {
+    "header": "Content-Security-Policy"
+  },
+  "source": "openclaw"
+}
