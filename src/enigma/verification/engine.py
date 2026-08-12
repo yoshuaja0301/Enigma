@@ -86,6 +86,7 @@ class VerificationResult:
                 "check": self.finding.check,
                 "title": self.finding.title,
                 "description": self.finding.description,
+                "parameters": dict(self.finding.parameters),
                 "ai_confidence": round(self.finding.confidence, 2),
             },
             "verification": {

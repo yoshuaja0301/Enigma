@@ -130,7 +130,11 @@ def _make_handler(service: EnigmaService, token: Optional[str]):
                 if report is None:
                     self._send_html(404, render_dashboard_html([]))
                 else:
-                    self._send_html(200, render_report_html(report, subtitle=f"Assessment {assessment_id}"))
+                    # served report is interactive: each finding gets a live "Prove it" button
+                    self._send_html(
+                        200,
+                        render_report_html(report, subtitle=f"Assessment {assessment_id}", interactive=True),
+                    )
                 return
             if self.path.startswith("/results/"):
                 assessment_id = self.path[len("/results/"):]
@@ -156,6 +160,8 @@ def _make_handler(service: EnigmaService, token: Optional[str]):
                 self._handle_validate(body)
             elif self.path in ("/verify", "/webhook/openclaw"):
                 self._handle_verify(body)
+            elif self.path == "/prove":
+                self._handle_prove(body)
             else:
                 self._send(404, {"error": "not found"})
 
@@ -189,6 +195,21 @@ def _make_handler(service: EnigmaService, token: Optional[str]):
                 report = dict(report)
                 report["callback"] = _deliver_callback(callback_url, report)
             self._send(200, report)
+
+        def _handle_prove(self, body: Dict[str, Any]) -> None:
+            assessment_id = body.get("assessment_id")
+            finding_id = body.get("finding_id")
+            if not assessment_id or not finding_id:
+                self._send(400, {"error": "assessment_id and finding_id are required"})
+                return
+            try:
+                self._send(200, service.prove(str(assessment_id), str(finding_id)))
+            except KeyError as exc:
+                self._send(404, {"error": str(exc)})
+            except ServerScopeError as exc:
+                self._send(403, {"error": str(exc)})
+            except (ValueError, RuntimeError) as exc:
+                self._send(400, {"error": str(exc)})
 
     return Handler
 

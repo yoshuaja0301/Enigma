@@ -81,6 +81,26 @@ class HttpApiTests(unittest.TestCase):
             report_html = resp.read().decode()
         self.assertTrue(report_html.lstrip().lower().startswith("<!doctype html>"))
         self.assertIn("Confirmed", report_html)
+        # served report is interactive: the live "Prove it" button is present
+        self.assertIn("Prove it live", report_html)
+        self.assertIn("enigmaProve", report_html)
+
+    def test_prove_endpoint_reruns_live(self):
+        from enigma.integrations import http_post_json
+
+        base = f"http://127.0.0.1:{self.port}"
+        self.client.verify(ASSESSMENT, FINDINGS)  # F-1 is a missing-CSP finding
+        result = http_post_json(f"{base}/prove", {"assessment_id": "ASM-API", "finding_id": "F-1"})
+        self.assertTrue(result["proof"]["proven"])
+        self.assertTrue(result["proof"]["exchanges"])
+
+    def test_prove_unknown_finding_404(self):
+        from enigma.integrations import http_post_json
+
+        base = f"http://127.0.0.1:{self.port}"
+        self.client.verify(ASSESSMENT, FINDINGS)
+        result = http_post_json(f"{base}/prove", {"assessment_id": "ASM-API", "finding_id": "NOPE"})
+        self.assertEqual(result.get("status_code"), 404)
 
 
 class HttpApiAuthTests(unittest.TestCase):

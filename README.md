@@ -163,6 +163,21 @@ outside its authorized scope.
 | `NOT_CONFIRMED` | The hypothesis could not be proven with the available verification. |
 | `INCONCLUSIVE` | Data/conditions were insufficient (blocked, reported, error, or inconsistent). |
 
+### Proof — showing it's real, not an AI guess
+
+Every finding carries a **human-readable receipt**: what it means and why it
+matters in plain language (English or Indonesian), the *exact* request Enigma
+sent and the server's *exact* reply, and the single decisive line that proves
+it. And it can be **re-proven live**:
+
+```bash
+enigma prove --assessment a.json --findings f.json --id F-1 --lang id
+```
+
+The report served at `GET /report/{id}` adds a **▶ Prove it live** button per
+finding (`POST /prove`) that re-runs the check against the real target on demand
+and shows the fresh evidence. See [`docs/proof.md`](docs/proof.md).
+
 ### OSSTMM RAV — a measured security score
 
 Beyond per-finding verdicts, Enigma computes an OSSTMM 3 **Risk Assessment
@@ -226,7 +241,8 @@ src/enigma/
   methodologies/  ⑦  OSSTMM taxonomy, controls, mapper
   reporting/      ⑧  verdict rendering: json, markdown, html, summary metrics
   controller.py      end-to-end pipeline orchestration
-  cli.py             `enigma validate` / `verify`
+  explain.py         plain-language explanations + human-readable proof receipts
+  cli.py             `enigma validate` / `verify` / `prove`
 ```
 
 **Optional extensions** — built on top of the same pipeline; remove them and the
@@ -242,7 +258,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 136 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 147 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON, MCP + adapter demos
 docs/             architecture, authorization, assessment-model, verification, ...
@@ -254,7 +270,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 136 tests, no external network required
+python3 -m pytest          # 147 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

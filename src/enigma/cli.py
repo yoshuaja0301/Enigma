@@ -24,6 +24,7 @@ from .agent.openclaw import StaticOpenClawAdapter
 from .authorization.validator import AuthorizationValidator
 from .controller import AssessmentController
 from .core.configuration import load_assessment
+from .explain import build_proof
 from .reporting import to_html, to_json, to_markdown
 from .service import EnigmaService
 from .verification.http import FakeTransport
@@ -65,6 +66,39 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         print(f"wrote {args.format} report to {args.output}")
     else:
         print(rendered)
+    return 0
+
+
+def _cmd_prove(args: argparse.Namespace) -> int:
+    assessment = load_assessment(args.assessment)
+    adapter = StaticOpenClawAdapter.from_file(args.findings)
+    transport = FakeTransport() if args.offline else None
+    results = AssessmentController(transport=transport).run(assessment, adapter)
+
+    if args.id:
+        results = [r for r in results if r.finding.finding_id == args.id]
+        if not results:
+            print(f"error: no finding with id {args.id!r}", file=sys.stderr)
+            return 1
+
+    icon = {"CONFIRMED": "PROVEN", "NOT_CONFIRMED": "not a problem", "INCONCLUSIVE": "unproven"}
+    for r in results:
+        proof = build_proof(r, lang=args.lang)
+        print("=" * 72)
+        verdict = r.verdict.value
+        print(f"{r.finding.finding_id}  [{icon.get(verdict, verdict)}]  {proof['label']}")
+        print(f"  What it means : {proof['what']}")
+        print(f"  Why it matters: {proof['why']}")
+        print(f"  How we checked: {proof['how']}")
+        if proof["exchanges"]:
+            print("  Proof (what we sent and got back):")
+            for ex in proof["exchanges"][:2]:
+                print(f"    → {ex['request']}")
+                print(f"    ← HTTP {ex['response_status']}")
+        print(f"  >> {proof['decisive']}")
+        rep = proof["reproduced"]
+        print(f"  Repeated {rep['times']} time(s); {'same result each time' if rep['consistent'] else 'results varied'}.")
+    print("=" * 72)
     return 0
 
 
@@ -118,6 +152,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="use a fake transport (no network); useful for demos and dry runs",
     )
     p_verify.set_defaults(func=_cmd_verify)
+
+    p_prove = sub.add_parser("prove", help="verify findings and print a plain-language proof")
+    p_prove.add_argument("--assessment", required=True, help="path to assessment JSON")
+    p_prove.add_argument("--findings", required=True, help="path to findings JSON")
+    p_prove.add_argument("--id", default=None, help="prove only this finding id")
+    p_prove.add_argument("--lang", choices=["en", "id"], default="en", help="plain-language register")
+    p_prove.add_argument("--offline", action="store_true", help="use a fake transport (no network)")
+    p_prove.set_defaults(func=_cmd_prove)
 
     p_serve = sub.add_parser("serve", help="run the REST + webhook API server")
     p_serve.add_argument("--host", default="127.0.0.1", help="bind host (default 127.0.0.1)")

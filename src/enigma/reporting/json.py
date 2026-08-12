@@ -5,11 +5,16 @@ from __future__ import annotations
 import json
 from typing import Any, List, Optional
 
+from ..explain import build_proof
 from .summary import Summary, summarize
 
 
 def result_to_dict(result: Any) -> dict:
-    return result.to_dict()
+    data = result.to_dict()
+    # Attach a human-readable proof (the request/response receipt + plain
+    # language) so every surface can show *why*, not just the verdict.
+    data["proof"] = build_proof(result)
+    return data
 
 
 def build_report(results: List[Any], summary: Optional[Summary] = None) -> dict:

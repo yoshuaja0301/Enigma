@@ -44,6 +44,7 @@ class EnigmaService:
             {h.strip().lower() for h in allowed_hosts if h.strip()} if allowed_hosts else None
         )
         self._results: Dict[str, Dict[str, Any]] = {}
+        self._runs: Dict[str, Dict[str, Any]] = {}  # assessment_id -> {assessment, findings}
 
     # ------------------------------------------------------------------ #
     @property
@@ -91,7 +92,34 @@ class EnigmaService:
         results = controller.run(assessment, adapter)
         report = build_report(results)
         self._results[assessment.assessment_id] = report
+        # Remember enough to re-prove any single finding live.
+        self._runs[assessment.assessment_id] = {
+            "assessment": assessment,
+            "findings": {r.finding.finding_id: r.finding for r in results},
+        }
         return report
+
+    def prove(self, assessment_id: str, finding_id: str) -> Dict[str, Any]:
+        """Re-run verification for ONE finding, live, and return fresh proof.
+
+        This is the "prove it now" action: it demonstrates that a finding
+        reproduces against the real target this instant, rather than trusting a
+        stored verdict.
+        """
+
+        run = self._runs.get(assessment_id)
+        if run is None:
+            raise KeyError(f"no verified assessment {assessment_id!r}")
+        finding = run["findings"].get(finding_id)
+        if finding is None:
+            raise KeyError(f"no finding {finding_id!r} in assessment {assessment_id!r}")
+
+        adapter = StaticOpenClawAdapter.from_data([finding.to_dict()])
+        controller = AssessmentController(transport=self._transport)
+        results = controller.run(run["assessment"], adapter)
+        report = build_report(results)
+        result = report["results"][0]
+        return {"finding_id": finding_id, "result": result, "proof": result.get("proof", {})}
 
     def get_result(self, assessment_id: str) -> Optional[Dict[str, Any]]:
         """Return the most recent report for an assessment, if any."""

@@ -111,6 +111,20 @@ table.idx { width: 100%; border-collapse: collapse; }
 table.idx th, table.idx td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
 table.idx th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
 .empty { color: var(--muted); background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center; }
+.plain { margin: 10px 0; }
+.plain .q { font-weight: 600; font-size: 13px; }
+.plain .a { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+.proof { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+.proof h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.decisive { background: var(--warn-bg); border-left: 3px solid var(--warn); padding: 8px 10px; border-radius: 6px; font-size: 13px; margin: 8px 0; }
+.decisive.ok { background: var(--ok-bg); border-left-color: var(--ok); }
+.decisive.bad { background: var(--bad-bg); border-left-color: var(--bad); }
+.exchange { margin: 8px 0; }
+.exchange .req { font-family: ui-monospace, monospace; font-size: 12px; color: var(--accent); word-break: break-all; }
+.exchange .st { font-size: 12px; color: var(--muted); }
+.prove-btn { cursor: pointer; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); border: none; border-radius: 8px; padding: 8px 14px; margin-top: 10px; }
+.prove-btn:disabled { opacity: .6; cursor: default; }
+.prove-out { margin-top: 10px; }
 """
 
 
@@ -160,7 +174,7 @@ def _bar(label: str, value: Any, kind: str) -> str:
     )
 
 
-def _finding_card(r: Dict[str, Any]) -> str:
+def _finding_card(r: Dict[str, Any], interactive: bool = False) -> str:
     verdict = str(r.get("verdict", "INCONCLUSIVE"))
     cls, icon, label = _VERDICT_META.get(verdict, ("inconclusive", "!", verdict))
     finding = r.get("finding", {})
@@ -216,15 +230,73 @@ def _finding_card(r: Dict[str, Any]) -> str:
     if chips:
         parts.append('<div class="chips">' + "".join(chips) + "</div>")
 
-    # observations (collapsible)
+    # plain language + proof receipt
+    parts.append(_proof_block(r, interactive))
+
+    # observations (collapsible, for the technical reader)
     observations = verification.get("observations") or []
     if observations:
         import json as _json
 
         pretty = escape(_json.dumps(observations, indent=2, ensure_ascii=False))
-        parts.append(f"<details><summary>Observations ({len(observations)})</summary><pre>{pretty}</pre></details>")
+        parts.append(f"<details><summary>Raw observations ({len(observations)})</summary><pre>{pretty}</pre></details>")
 
     parts.append("</div>")
+    return "".join(parts)
+
+
+def _proof_block(r: Dict[str, Any], interactive: bool) -> str:
+    proof = r.get("proof") or {}
+    if not proof:
+        return ""
+    verdict = str(r.get("verdict", ""))
+    decisive_cls = "ok" if verdict == "CONFIRMED" else ("bad" if verdict == "NOT_CONFIRMED" else "")
+
+    parts: List[str] = ['<div class="plain">']
+    if proof.get("what"):
+        parts.append(f'<div class="q">What this means</div><div class="a">{escape(str(proof["what"]))}</div>')
+    if proof.get("why"):
+        parts.append(f'<div class="q">Why it matters</div><div class="a">{escape(str(proof["why"]))}</div>')
+    parts.append("</div>")
+
+    exchanges = proof.get("exchanges") or []
+    if exchanges or proof.get("decisive"):
+        parts.append('<div class="proof">')
+        parts.append("<h4>Proof — what we sent and got back</h4>")
+        if proof.get("how"):
+            parts.append(f'<div class="a">{escape(str(proof["how"]))}</div>')
+        for ex in exchanges[:2]:  # first probe is enough to show the receipt
+            parts.append('<div class="exchange">')
+            parts.append(f'<div class="req">→ {escape(str(ex.get("request", "")))}</div>')
+            parts.append(f'<div class="st">← HTTP {escape(str(ex.get("response_status")))}</div>')
+            headers = ex.get("response_headers") or {}
+            if headers:
+                import json as _json
+
+                shown = escape(_json.dumps(headers, indent=2, ensure_ascii=False))
+                parts.append(f"<details><summary>response headers</summary><pre>{shown}</pre></details>")
+            body = (ex.get("body_excerpt") or "").strip()
+            if body:
+                parts.append(f"<pre>{escape(body[:400])}</pre>")
+            parts.append("</div>")
+        if proof.get("decisive"):
+            parts.append(f'<div class="decisive {decisive_cls}">{escape(str(proof["decisive"]))}</div>')
+        rep = proof.get("reproduced") or {}
+        if rep.get("times"):
+            consistent = "same result each time" if rep.get("consistent") else "results varied"
+            parts.append(
+                f'<div class="a">Repeated {escape(str(rep.get("times")))} time(s) — {consistent}.</div>'
+            )
+
+        if interactive:
+            aid = escape(str(r.get("assessment_id", "")))
+            fid = escape(str(r.get("finding_id", "")))
+            parts.append(
+                f'<button class="prove-btn" onclick="enigmaProve(this)" '
+                f'data-aid="{aid}" data-fid="{fid}">▶ Prove it live</button>'
+                f'<div class="prove-out" id="prove-{fid}"></div>'
+            )
+        parts.append("</div>")
     return "".join(parts)
 
 
@@ -319,10 +391,38 @@ def _coverage_block(coverage: Dict[str, Any]) -> str:
     return "".join(rows)
 
 
+# Small runtime for the "Prove it live" button (served dashboard only).
+_PROVE_JS = """
+<script>
+async function enigmaProve(btn){
+  const aid = btn.getAttribute('data-aid'), fid = btn.getAttribute('data-fid');
+  const out = document.getElementById('prove-' + fid);
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Proving…';
+  out.textContent = '';
+  try {
+    const res = await fetch('/prove', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({assessment_id: aid, finding_id: fid})});
+    const data = await res.json();
+    if (!res.ok || data.error) { out.innerHTML = '<div class="decisive bad">'+(data.error||('HTTP '+res.status))+'</div>'; return; }
+    const p = data.proof || {};
+    let html = '<div class="decisive '+(p.proven?'ok':'bad')+'">Live re-check just now: '+ (p.decisive||'') +'</div>';
+    (p.exchanges||[]).slice(0,1).forEach(function(ex){
+      html += '<div class="exchange"><div class="req">→ '+ex.request+'</div><div class="st">← HTTP '+ex.response_status+'</div></div>';
+    });
+    const rep = p.reproduced||{}; if (rep.times) html += '<div class="a">Repeated '+rep.times+' time(s) just now.</div>';
+    out.innerHTML = html;
+  } catch (e) { out.innerHTML = '<div class="decisive bad">'+e+'</div>'; }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+</script>
+"""
+
+
 def render_report_html(
     report: Dict[str, Any],
     title: str = "Enigma Assessment Report",
     subtitle: Optional[str] = None,
+    interactive: bool = False,
 ) -> str:
     summary = report.get("summary", {})
     results = report.get("results", [])
@@ -339,7 +439,7 @@ def render_report_html(
     body.append("<h2>Findings</h2>")
     if results:
         for r in results:
-            body.append(_finding_card(r))
+            body.append(_finding_card(r, interactive))
     else:
         body.append('<div class="empty">No findings were assessed.</div>')
 
@@ -350,6 +450,8 @@ def render_report_html(
         "authorized web vulnerability assessment. Verdicts reflect controlled, non-destructive "
         "verification; evidence is sanitized.</footer>"
     )
+    if interactive:
+        body.append(_PROVE_JS)
     return _doc(title, "".join(body))
 
 

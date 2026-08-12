@@ -48,7 +48,8 @@ enigma serve --host 127.0.0.1 --port 8737 \
 | `POST /verify` | `{assessment, findings, callback_url?}` | full report (JSON) |
 | `POST /webhook/openclaw` | same as `/verify` | full report (push alias) |
 | `GET /results/{assessment_id}` | — | last stored report (JSON) |
-| `GET /report/{assessment_id}` | — | last stored report (HTML page) |
+| `GET /report/{assessment_id}` | — | last stored report (interactive HTML page) |
+| `POST /prove` | `{assessment_id, finding_id}` | re-run ONE finding live, return fresh proof |
 
 - **Auth:** if a token is set, every route except `/health` requires
   `Authorization: Bearer <token>`.
