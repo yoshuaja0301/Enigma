@@ -2,11 +2,14 @@
 
 from .engine import (
     BlockedError,
+    CookieFlagsProcedure,
+    CorsProcedure,
     HttpMethodProcedure,
     ProbeContext,
     ProbeOutcome,
     ReflectionProcedure,
     SecurityHeaderProcedure,
+    TlsRedirectProcedure,
     VerificationEngine,
     VerificationResult,
 )
@@ -23,6 +26,9 @@ __all__ = [
     "SecurityHeaderProcedure",
     "ReflectionProcedure",
     "HttpMethodProcedure",
+    "CookieFlagsProcedure",
+    "CorsProcedure",
+    "TlsRedirectProcedure",
     "Transport",
     "UrllibTransport",
     "FakeTransport",

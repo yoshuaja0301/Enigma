@@ -19,6 +19,9 @@ _CHECK_MAP = {
     "security_header": (Section.CONFIGURATION, [Control.CONFIDENTIALITY, Control.INTEGRITY]),
     "reflection": (Section.INTEGRITY, [Control.INTEGRITY, Control.SUBJUGATION]),
     "http_method": (Section.ACCESS_CONTROL, [Control.AUTHENTICATION, Control.SUBJUGATION]),
+    "cookie_flags": (Section.CONFIDENTIALITY, [Control.CONFIDENTIALITY, Control.PRIVACY]),
+    "cors": (Section.ACCESS_CONTROL, [Control.CONFIDENTIALITY, Control.SUBJUGATION]),
+    "tls_redirect": (Section.CONFIDENTIALITY, [Control.CONFIDENTIALITY, Control.INTEGRITY]),
 }
 
 _DEFAULT_MAP = (Section.INFORMATION, [Control.CONFIDENTIALITY])

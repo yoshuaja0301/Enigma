@@ -41,6 +41,13 @@ class _Handler(BaseHTTPRequestHandler):
             # echo the raw query back (reflection signal)
             query = self.path.split("?", 1)[1] if "?" in self.path else ""
             self._send(body=f"you searched: {query}".encode())
+        elif self.path.startswith("/cookie"):
+            # an intentionally insecure cookie (no HttpOnly / Secure)
+            self._send({"Set-Cookie": "sid=abc123; Path=/"})
+        elif self.path.startswith("/cors"):
+            # reflect whatever Origin the client sent (permissive CORS)
+            origin = self.headers.get("Origin", "")
+            self._send({"Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true"})
         else:
             self._send()
 
@@ -114,6 +121,27 @@ class LocalPipelineTests(unittest.TestCase):
     def test_http_method_trace_confirmed(self):
         results = self._run(
             [{"finding_id": "F-TRACE", "check": "http_method", "target": {"path": "/"}, "parameters": {"method": "TRACE"}}]
+        )
+        self.assertEqual(results[0].verdict, Verdict.CONFIRMED)
+
+    def test_cookie_missing_httponly_confirmed(self):
+        results = self._run(
+            [{"finding_id": "F-CK", "check": "cookie_flags", "target": {"path": "/cookie"},
+              "parameters": {"flag": "HttpOnly"}}]
+        )
+        self.assertEqual(results[0].verdict, Verdict.CONFIRMED)
+
+    def test_cors_reflection_confirmed(self):
+        results = self._run(
+            [{"finding_id": "F-CORS", "check": "cors", "target": {"path": "/cors"}}]
+        )
+        self.assertEqual(results[0].verdict, Verdict.CONFIRMED)
+        self.assertTrue(results[0].observations[0]["credentialed_reflection"])
+
+    def test_tls_redirect_missing_confirmed(self):
+        # the test server is plain HTTP, so there is no upgrade to HTTPS
+        results = self._run(
+            [{"finding_id": "F-TLS", "check": "tls_redirect", "target": {"path": "/"}}]
         )
         self.assertEqual(results[0].verdict, Verdict.CONFIRMED)
 

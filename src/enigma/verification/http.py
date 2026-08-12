@@ -13,7 +13,7 @@ authorization gate.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Protocol
+from typing import Dict, List, Optional, Protocol, Tuple
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 
@@ -25,6 +25,8 @@ class HttpResponse:
     body: str = ""
     url: str = ""
     error: Optional[str] = None
+    # Full (name, value) list preserving duplicates, e.g. multiple Set-Cookie.
+    raw_headers: List[Tuple[str, str]] = field(default_factory=list)
 
     def header(self, name: str) -> Optional[str]:
         target = name.lower()
@@ -35,6 +37,18 @@ class HttpResponse:
 
     def has_header(self, name: str) -> bool:
         return self.header(name) is not None
+
+    def header_all(self, name: str) -> List[str]:
+        """All values for a header, preserving duplicates (uses raw_headers)."""
+
+        target = name.lower()
+        if self.raw_headers:
+            return [v for k, v in self.raw_headers if k.lower() == target]
+        value = self.header(name)
+        return [value] if value is not None else []
+
+    def set_cookies(self) -> List[str]:
+        return self.header_all("Set-Cookie")
 
 
 class Transport(Protocol):
@@ -84,6 +98,7 @@ class UrllibTransport:
                 return HttpResponse(
                     status=resp.status,
                     headers=dict(resp.headers.items()),
+                    raw_headers=list(resp.headers.items()),
                     body=body.decode("utf-8", errors="replace"),
                     url=resp.url or url,
                 )
@@ -93,9 +108,11 @@ class UrllibTransport:
                 body = exc.read(max_body_bytes)
             except Exception:  # pragma: no cover - best effort
                 pass
+            headers = list(exc.headers.items()) if exc.headers else []
             return HttpResponse(
                 status=exc.code,
-                headers=dict(exc.headers.items()) if exc.headers else {},
+                headers=dict(headers),
+                raw_headers=headers,
                 body=body.decode("utf-8", errors="replace"),
                 url=url,
             )

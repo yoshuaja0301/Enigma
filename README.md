@@ -170,9 +170,13 @@ outside its authorized scope.
 | `security_header` | Whether a security header (e.g. `Content-Security-Policy`) is present/absent. |
 | `reflection` | Whether a benign random marker sent as a query value is reflected verbatim. |
 | `http_method` | Whether a method is advertised in the `Allow` header (via `OPTIONS`). |
+| `cookie_flags` | Whether a `Set-Cookie` is missing a flag (`Secure` / `HttpOnly` / `SameSite`). |
+| `cors` | Whether an arbitrary `Origin` is reflected in `Access-Control-Allow-Origin` (worse with credentials). |
+| `tls_redirect` | Whether plain HTTP is upgraded to HTTPS (redirect observed, never followed; notes HSTS). |
 
-A finding whose `check` is unknown or unsupported is **skipped** to
-`INCONCLUSIVE` rather than probed unsafely.
+Discovery is **unrestricted** — OpenClaw may report any vulnerability type. A
+finding that matches one of these checks is verified automatically; anything
+else is kept as `needs_manual_review` (never dropped, never probed unsafely).
 
 ---
 
@@ -217,7 +221,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 95 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 110 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON, MCP + adapter demos
 docs/             architecture, authorization, assessment-model, verification, ...
@@ -229,7 +233,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 95 tests, no external network required
+python3 -m pytest          # 110 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

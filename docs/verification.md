@@ -18,15 +18,27 @@ using controlled, non-destructive probes, then issues a verdict.
 
 ## Built-in safe procedures
 
-| `check` | Method(s) | Condition tested | Nature |
+| `check` | Method(s) | Condition tested (weakness) | Key parameters |
 |---|---|---|---|
-| `security_header` | GET | required header absent | observational |
-| `reflection` | GET | benign marker reflected verbatim | observational |
-| `http_method` | OPTIONS | method advertised in `Allow` | observational |
+| `security_header` | GET | required header absent | `header` |
+| `reflection` | GET | benign marker reflected verbatim | `param` |
+| `http_method` | OPTIONS | method advertised in `Allow` | `method` |
+| `cookie_flags` | GET | `Set-Cookie` missing a flag | `flag` (`Secure`/`HttpOnly`/`SameSite`), optional `cookie` |
+| `cors` | GET + `Origin` header | arbitrary `Origin` reflected (or `*`) in `Access-Control-Allow-Origin` | optional `origin` |
+| `tls_redirect` | GET (http:// variant) | HTTP not upgraded to HTTPS | — |
 
-The `reflection` procedure sends only an alphanumeric marker
-(`enigma<random>`), never an HTML/script payload — it detects *reflection*, not
-exploitability.
+All procedures are strictly observational, non-destructive, and read-oriented:
+
+- `reflection` sends only an alphanumeric marker (`enigma<random>`), never an
+  HTML/script payload — it detects *reflection*, not exploitability.
+- `cors` sends a benign probe `Origin` header on a GET and reads the response;
+  it flags the dangerous case of a reflected origin **with** credentials.
+- `tls_redirect` requests the `http://` variant of the target path (still through
+  the authorization gate) and *observes* the redirect — it never follows it —
+  and also notes whether `Strict-Transport-Security` (HSTS) is present.
+
+Every request a procedure makes still passes through the authorization-first
+gate via `ProbeContext.send`, including the `tls_redirect` probe's `http://` URL.
 
 ## Verdict logic
 

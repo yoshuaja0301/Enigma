@@ -28,6 +28,9 @@ Web assessment lives in the **COMSEC / Data Networks** channel.
 | `security_header` | Configuration & Hardening | Confidentiality, Integrity |
 | `reflection` | Integrity | Integrity, Subjugation |
 | `http_method` | Access Control | Authentication, Subjugation |
+| `cookie_flags` | Confidentiality | Confidentiality, Privacy |
+| `cors` | Access Control | Confidentiality, Subjugation |
+| `tls_redirect` | Confidentiality | Confidentiality, Integrity |
 | *(default / unknown)* | Information Leakage | Confidentiality |
 
 The mapping is keyed on the verification `check`, so it stays stable regardless

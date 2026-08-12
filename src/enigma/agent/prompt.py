@@ -27,6 +27,12 @@ _CHECK_PARAMS = {
     "security_header": {"header": "the security header expected to be present, e.g. Content-Security-Policy"},
     "reflection": {"param": "the query parameter to test for reflection, e.g. q"},
     "http_method": {"method": "the HTTP method to test for, e.g. TRACE"},
+    "cookie_flags": {
+        "flag": "the cookie flag expected, one of Secure / HttpOnly / SameSite",
+        "cookie": "optional: a specific cookie name to check",
+    },
+    "cors": {"origin": "optional: an Origin to test for reflection (default a benign probe origin)"},
+    "tls_redirect": {},
 }
 
 

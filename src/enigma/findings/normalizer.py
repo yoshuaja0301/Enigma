@@ -19,7 +19,9 @@ _counter = itertools.count(1)
 # Recognized safe verification procedures. A finding whose check is not in this
 # set is normalized with check=None, which yields an INCONCLUSIVE verdict rather
 # than an unsafe or unknown probe.
-KNOWN_CHECKS = frozenset({"security_header", "reflection", "http_method"})
+KNOWN_CHECKS = frozenset(
+    {"security_header", "reflection", "http_method", "cookie_flags", "cors", "tls_redirect"}
+)
 
 # Map common OpenClaw category strings onto a default safe check.
 _CATEGORY_CHECK_HINTS = {
@@ -29,6 +31,15 @@ _CATEGORY_CHECK_HINTS = {
     "reflection": "reflection",
     "http_methods": "http_method",
     "http_method": "http_method",
+    "cookie": "cookie_flags",
+    "cookie_flags": "cookie_flags",
+    "insecure_cookie": "cookie_flags",
+    "cors": "cors",
+    "cors_misconfiguration": "cors",
+    "tls": "tls_redirect",
+    "tls_redirect": "tls_redirect",
+    "https_redirect": "tls_redirect",
+    "hsts": "tls_redirect",
 }
 
 

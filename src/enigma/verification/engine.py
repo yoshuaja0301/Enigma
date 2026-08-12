@@ -22,7 +22,7 @@ import secrets
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from ..authorization.validator import AuthorizationResult, AuthorizationValidator, BlockStage
 from ..core.assessment import Assessment
@@ -132,8 +132,11 @@ class ProbeContext:
         path: Optional[str] = None,
         query: Optional[Dict[str, str]] = None,
         headers: Optional[Dict[str, str]] = None,
+        url: Optional[str] = None,
     ) -> HttpResponse:
-        url = self.build_url(path, query)
+        # An explicit `url` (e.g. the http:// variant for a TLS-redirect probe)
+        # still passes through the authorization gate before anything is sent.
+        url = url or self.build_url(path, query)
         decision = self._validator.authorize(url, method)
         if not decision.allowed:
             raise BlockedError(decision)
@@ -243,10 +246,139 @@ class HttpMethodProcedure:
         )
 
 
+class CookieFlagsProcedure:
+    """Observe whether a Set-Cookie is missing a security flag.
+
+    Non-destructive: a single GET, then inspection of Set-Cookie headers.
+    Hypothesis (weakness) = the required flag is ABSENT on the relevant cookie.
+    """
+
+    key = "cookie_flags"
+    _CANONICAL = {"secure": "Secure", "httponly": "HttpOnly", "samesite": "SameSite"}
+
+    def applies_to(self, finding: Finding) -> bool:
+        return bool(finding.parameters.get("flag"))
+
+    def probe(self, ctx: ProbeContext, finding: Finding) -> ProbeOutcome:
+        flag_raw = str(finding.parameters["flag"])
+        flag = self._CANONICAL.get(flag_raw.strip().lower(), flag_raw)
+        cookie_name = finding.parameters.get("cookie")
+
+        resp = ctx.send("GET")
+        if resp.status == 0:
+            return ProbeOutcome(False, {"check": "cookie_flags", "flag": flag}, error=resp.error or "request failed")
+
+        cookies = resp.set_cookies()
+        if cookie_name:
+            cookies = [c for c in cookies if c.split("=", 1)[0].strip().lower() == str(cookie_name).lower()]
+        if not cookies:
+            return ProbeOutcome(
+                False,
+                {"check": "cookie_flags", "flag": flag, "cookies_seen": 0},
+                error="no matching Set-Cookie observed",
+            )
+
+        missing = [c.split("=", 1)[0].strip() for c in cookies if flag.lower() not in c.lower()]
+        condition_met = len(missing) > 0  # at least one cookie lacks the flag
+        return ProbeOutcome(
+            condition_met=condition_met,
+            observation={
+                "check": "cookie_flags",
+                "flag": flag,
+                "cookies_seen": len(cookies),
+                "cookies_missing_flag": missing,
+                "status": resp.status,
+            },
+        )
+
+
+class CorsProcedure:
+    """Observe whether the server reflects an arbitrary Origin (permissive CORS).
+
+    Non-destructive: a GET carrying a benign `Origin` header. Hypothesis
+    (weakness) = the response reflects that origin (or `*`) in
+    Access-Control-Allow-Origin — worse still with Allow-Credentials: true.
+    """
+
+    key = "cors"
+    _PROBE_ORIGIN = "https://enigma-cors-probe.example"
+
+    def applies_to(self, finding: Finding) -> bool:  # noqa: ARG002 - always applicable
+        return True
+
+    def probe(self, ctx: ProbeContext, finding: Finding) -> ProbeOutcome:
+        origin = str(finding.parameters.get("origin", self._PROBE_ORIGIN))
+        resp = ctx.send("GET", headers={"Origin": origin})
+        if resp.status == 0:
+            return ProbeOutcome(False, {"check": "cors", "origin": origin}, error=resp.error or "request failed")
+
+        acao = resp.header("Access-Control-Allow-Origin")
+        acac = (resp.header("Access-Control-Allow-Credentials") or "").strip().lower() == "true"
+        reflected = acao == origin
+        wildcard = acao == "*"
+        condition_met = reflected or wildcard
+        return ProbeOutcome(
+            condition_met=condition_met,
+            observation={
+                "check": "cors",
+                "origin_sent": origin,
+                "access_control_allow_origin": acao,
+                "allow_credentials": acac,
+                "reflects_origin": reflected,
+                "wildcard": wildcard,
+                # reflected origin + credentials is the dangerous combination
+                "credentialed_reflection": reflected and acac,
+                "status": resp.status,
+            },
+        )
+
+
+class TlsRedirectProcedure:
+    """Observe whether plain HTTP is upgraded to HTTPS (and note HSTS).
+
+    Non-destructive: a single GET to the http:// variant (redirects are observed,
+    never followed). Hypothesis (weakness) = HTTP is served without redirecting
+    to HTTPS.
+    """
+
+    key = "tls_redirect"
+
+    def applies_to(self, finding: Finding) -> bool:  # noqa: ARG002 - always applicable
+        return True
+
+    def probe(self, ctx: ProbeContext, finding: Finding) -> ProbeOutcome:
+        parsed = urlsplit(ctx.build_url(finding.target_path))
+        http_url = urlunsplit(("http", parsed.hostname + (f":{parsed.port}" if parsed.port else ""),
+                               parsed.path or "/", "", ""))
+        resp = ctx.send("GET", url=http_url)
+        if resp.status == 0:
+            return ProbeOutcome(False, {"check": "tls_redirect", "http_url": http_url}, error=resp.error or "request failed")
+
+        location = resp.header("Location") or ""
+        redirects_to_https = 300 <= resp.status < 400 and location.lower().startswith("https://")
+        hsts_present = resp.has_header("Strict-Transport-Security")
+        # Weakness: HTTP is not upgraded to HTTPS.
+        condition_met = not redirects_to_https
+        return ProbeOutcome(
+            condition_met=condition_met,
+            observation={
+                "check": "tls_redirect",
+                "http_url": http_url,
+                "status": resp.status,
+                "location": location or None,
+                "redirects_to_https": redirects_to_https,
+                "hsts_present": hsts_present,
+            },
+        )
+
+
 _DEFAULT_PROCEDURES = {
     SecurityHeaderProcedure.key: SecurityHeaderProcedure(),
     ReflectionProcedure.key: ReflectionProcedure(),
     HttpMethodProcedure.key: HttpMethodProcedure(),
+    CookieFlagsProcedure.key: CookieFlagsProcedure(),
+    CorsProcedure.key: CorsProcedure(),
+    TlsRedirectProcedure.key: TlsRedirectProcedure(),
 }
 
 
