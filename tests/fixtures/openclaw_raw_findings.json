@@ -1,0 +1,45 @@
+{
+  "_comment": "Messy, realistic OpenClaw output used to exercise the normalizer's tolerance. Covers: missing finding_id, id-instead-of-finding_id, out-of-range confidence, category-only (check inferred), unknown category (no safe check -> INCONCLUSIVE), and a target given without a path.",
+  "findings": [
+    {
+      "finding_id": "OC-100",
+      "title": "CSP header appears absent",
+      "category": "missing_security_header",
+      "confidence": 0.74,
+      "target": { "host": "authorized-target.example", "path": "/search" },
+      "check": "security_header",
+      "parameters": { "header": "Content-Security-Policy" }
+    },
+    {
+      "id": "OC-101",
+      "title": "Uses 'id' instead of 'finding_id'",
+      "category": "reflected_input",
+      "confidence": 1.7,
+      "target": { "path": "/search" },
+      "parameters": { "param": "q" }
+    },
+    {
+      "title": "No id at all - normalizer must generate one",
+      "category": "http_methods",
+      "confidence": -0.5,
+      "target": { "path": "/" },
+      "parameters": { "method": "TRACE" }
+    },
+    {
+      "finding_id": "OC-103",
+      "title": "Unknown category - no safe check exists",
+      "category": "business_logic",
+      "confidence": 0.66,
+      "target": { "path": "/cart" }
+    },
+    {
+      "finding_id": "OC-104",
+      "title": "Target without an explicit path",
+      "category": "missing_security_header",
+      "confidence": 0.5,
+      "target": { "host": "authorized-target.example" },
+      "check": "security_header",
+      "parameters": { "header": "X-Frame-Options" }
+    }
+  ]
+}

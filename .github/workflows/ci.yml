@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: tests (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+  smoke:
+    name: CLI smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      # The authorization gate must ALLOW an in-scope target...
+      - name: enigma validate (in scope, expect exit 0)
+        run: enigma validate --assessment examples/assessment.json
+
+      # ...and BLOCK an out-of-scope one (exit code 2). This asserts the
+      # authorization-first guarantee end to end, not just in unit tests.
+      - name: enigma validate (out of scope, expect ASSESSMENT BLOCKED)
+        run: |
+          cat > /tmp/out-of-scope.json <<'JSON'
+          {
+            "assessment_id": "ASM-CI-BLOCKED",
+            "target": {"url": "https://not-in-scope.example/"},
+            "authorization": {"status": "authorized"},
+            "scope": {"allowed_hosts": ["authorized-target.example"]},
+            "profile": "safe_verification"
+          }
+          JSON
+          set +e
+          output=$(enigma validate --assessment /tmp/out-of-scope.json)
+          code=$?
+          set -e
+          echo "$output"
+          if [ "$code" -ne 2 ]; then
+            echo "::error::expected exit code 2 (blocked), got $code"
+            exit 1
+          fi
+          echo "$output" | grep -q "ASSESSMENT BLOCKED" || {
+            echo "::error::expected 'ASSESSMENT BLOCKED' in output"; exit 1; }
+
+      - name: enigma verify (offline dry run, all report formats)
+        run: |
+          enigma verify --assessment examples/assessment.json \
+            --findings examples/findings.json --offline --format md > /dev/null
+          enigma verify --assessment examples/assessment.json \
+            --findings examples/findings.json --offline --format json > /dev/null
+          enigma verify --assessment examples/assessment.json \
+            --findings examples/findings.json --offline --format html \
+            --output /tmp/report.html
+          test -s /tmp/report.html
+
+      - name: MCP + adapter demos
+        run: |
+          python examples/mcp/openclaw_agent_demo.py
+          python examples/openclaw/custom_adapter_demo.py

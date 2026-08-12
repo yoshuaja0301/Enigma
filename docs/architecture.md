@@ -59,20 +59,24 @@ The whole pipeline is driven by `AssessmentController` (or, exposed as a service
 
 ## Module map
 
-| Package / file | Responsibility |
-|---|---|
-| `core` | Assessment, Target, Scope, Authorization, configuration loading. |
-| `authorization` | Scope guard, policy guard, and the authorization-first validator. |
-| `agent` | `OpenClawAdapter` interface + static / callable(LLM) / HTTP adapters. |
-| `findings` | Normalized `Finding`, `Verdict`, confidence helpers, normalizer. |
-| `verification` | Engine, safe procedures, HTTP transport, reproducibility. |
-| `evidence` | Collector, sanitizer, store. |
-| `methodologies/osstmm` | Taxonomy, operational controls, mapper. |
-| `reporting` | JSON / Markdown / HTML (report + dashboard) + summary metrics. |
-| `service.py` | Transport-agnostic facade shared by every surface. |
-| `integrations` | REST + webhook API + HTML dashboard, MCP server, client SDKs. |
-| `controller.py` | End-to-end pipeline orchestration. |
-| `cli.py` / `__main__.py` | `enigma validate` / `verify` / `serve` / `mcp`. |
+**Core** implements the pipeline; **extension** modules are built on top of it
+and can be removed without affecting the core.
+
+| Package / file | Kind | Responsibility |
+|---|---|---|
+| `core` | core | Assessment, Target, Scope, Authorization, configuration loading. |
+| `authorization` | core | Scope guard, policy guard, and the authorization-first validator. |
+| `agent` | core | `OpenClawAdapter` interface + static / callable(LLM) / HTTP adapters. |
+| `findings` | core | Normalized `Finding`, `Verdict`, confidence helpers, normalizer. |
+| `verification` | core | Engine, safe procedures, HTTP transport, reproducibility. |
+| `evidence` | core | Collector, sanitizer, store. |
+| `methodologies/osstmm` | core | Taxonomy, operational controls, mapper. |
+| `reporting` | core | JSON / Markdown / summary metrics (HTML renderer is an extension). |
+| `controller.py` | core | End-to-end pipeline orchestration. |
+| `cli.py` / `__main__.py` | core | `enigma validate` / `verify` (plus `serve` / `mcp`). |
+| `service.py` | extension | Transport-agnostic facade shared by every surface. |
+| `integrations` | extension | REST + webhook API + HTML dashboard, MCP server, client SDKs. |
+| `reporting/html.py` | extension | HTML report + dashboard rendering. |
 
 ## Key design property
 

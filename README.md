@@ -1,5 +1,7 @@
 # Enigma
 
+[![CI](https://github.com/yoshuaja0301/Enigma/actions/workflows/ci.yml/badge.svg)](https://github.com/yoshuaja0301/Enigma/actions/workflows/ci.yml)
+
 **Evidence-based verification framework for AI-assisted, authorized web vulnerability assessment.**
 
 Enigma is a *proof layer* for AI-assisted web security assessment. An AI agent
@@ -186,23 +188,40 @@ A finding whose `check` is unknown or unsupported is **skipped** to
 
 ## Repository layout
 
+**Core foundation** — one package per pipeline stage, in pipeline order:
+
 ```
 src/enigma/
-  core/           assessment, target, scope, authorization, configuration
-  authorization/  scope guard, policy guard, authorization-first validator
-  agent/          OpenClaw adapter (integration seam)
-  findings/       finding schema, confidence, normalizer
-  verification/   engine, safe procedures, HTTP transport, reproducibility
-  evidence/       collector, sanitizer, store
-  methodologies/  OSSTMM taxonomy, controls, mapper
-  reporting/      json, markdown, html (report + dashboard), summary/metrics
+  core/           ①  assessment, target, scope, authorization, configuration
+  authorization/  ②  scope guard, policy guard, authorization-first validator
+  agent/          ③  OpenClaw adapters (static · callable/LLM · HTTP)
+  findings/       ④  finding schema, confidence, normalizer
+  verification/   ⑤  engine, safe procedures, HTTP transport, reproducibility
+  evidence/       ⑥  collector, sanitizer, store
+  methodologies/  ⑦  OSSTMM taxonomy, controls, mapper
+  reporting/      ⑧  verdict rendering: json, markdown, html, summary metrics
+  controller.py      end-to-end pipeline orchestration
+  cli.py             `enigma validate` / `verify`
+```
+
+**Optional extensions** — built on top of the same pipeline; remove them and the
+core still works:
+
+```
   service.py      transport-agnostic facade shared by every surface
-  integrations/   REST + webhook API + HTML dashboard, MCP server, client SDK
-  controller.py   end-to-end orchestration
-  cli.py          `enigma validate` / `verify` / `serve` / `mcp`
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 79 tests
-examples/         assessment / findings / verification-result JSON
-docs/             architecture, authorization, verification, evidence, osstmm...
+  integrations/   REST + webhook API + HTML dashboard, MCP server, client SDKs
+  cli.py          `enigma serve` / `enigma mcp` subcommands
+  reporting/html  HTML report + dashboard rendering
+```
+
+**Supporting:**
+
+```
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 95 tests
+  fixtures/       raw OpenClaw payloads used by the normalizer tests
+examples/         assessment / findings / verification-result JSON, MCP + adapter demos
+docs/             architecture, authorization, assessment-model, verification, ...
+.github/          CI: full suite on Python 3.9–3.13 + CLI/demo smoke tests
 ```
 
 ---
@@ -210,8 +229,13 @@ docs/             architecture, authorization, verification, evidence, osstmm...
 ## Tests
 
 ```bash
-python3 -m pytest          # 79 tests, no external network required
+python3 -m pytest          # 95 tests, no external network required
 ```
+
+CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and
+pull request, plus a smoke job that asserts the CLI end to end — including that
+an out-of-scope target really exits with `ASSESSMENT BLOCKED` — and runs the MCP
+and adapter demos. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 The integration suite spins up a throwaway local HTTP server on `127.0.0.1` and
 runs the full pipeline against it (authorized, in scope).
