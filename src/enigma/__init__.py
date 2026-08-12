@@ -9,7 +9,12 @@ a CONFIRMED / NOT_CONFIRMED / INCONCLUSIVE verdict.
 
 from __future__ import annotations
 
-from .agent.openclaw import OpenClawAdapter, StaticOpenClawAdapter
+from .agent.openclaw import (
+    CallableOpenClawAdapter,
+    HttpOpenClawAdapter,
+    OpenClawAdapter,
+    StaticOpenClawAdapter,
+)
 from .controller import AssessmentController
 from .core.assessment import (
     Assessment,
@@ -42,6 +47,8 @@ __all__ = [
     "FindingNormalizer",
     "OpenClawAdapter",
     "StaticOpenClawAdapter",
+    "CallableOpenClawAdapter",
+    "HttpOpenClawAdapter",
     "VerificationEngine",
     "VerificationResult",
     "OsstmmMapper",
