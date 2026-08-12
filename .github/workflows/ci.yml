@@ -1,8 +1,11 @@
 name: CI
 
 on:
+  # Only the default branch runs on push; every other branch is covered by the
+  # pull_request event. Listening to both for all branches would run CI twice
+  # for each push to a branch that has an open PR.
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
