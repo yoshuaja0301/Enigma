@@ -12,6 +12,7 @@ from .prompt import (
     coerce_findings,
     parse_openclaw_findings,
 )
+from .tools import ToolFindingAdapter, parse_nuclei, parse_zap
 
 __all__ = [
     "OpenClawAdapter",
@@ -22,4 +23,7 @@ __all__ = [
     "build_openclaw_request",
     "parse_openclaw_findings",
     "coerce_findings",
+    "ToolFindingAdapter",
+    "parse_nuclei",
+    "parse_zap",
 ]

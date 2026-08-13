@@ -87,6 +87,8 @@ class VerificationResult:
                 "title": self.finding.title,
                 "description": self.finding.description,
                 "parameters": dict(self.finding.parameters),
+                # Provenance: which finder proposed this (openclaw, nuclei, zap…).
+                "source": self.finding.source,
                 "ai_confidence": round(self.finding.confidence, 2),
             },
             "verification": {

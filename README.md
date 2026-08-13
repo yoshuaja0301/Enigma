@@ -178,6 +178,21 @@ The report served at `GET /report/{id}` adds a **▶ Prove it live** button per
 finding (`POST /prove`) that re-runs the check against the real target on demand
 and shows the fresh evidence. See [`docs/proof.md`](docs/proof.md).
 
+### Feeding in Nuclei / OWASP ZAP output
+
+Scanners are finders too — their output is parsed into findings and **verified**,
+not trusted:
+
+```bash
+enigma verify --assessment a.json --nuclei nuclei.jsonl --zap zap-report.json
+```
+
+Findings matching one of the nine checks are verified automatically; the rest
+stay `reported`. The tool's own severity becomes the finding's `confidence` — the
+hypothesis slot verification never reads — so a *High confidence* ZAP alert can
+still come back `NOT_CONFIRMED` when the server disagrees, and a Nuclei *info*
+finding can come back `CONFIRMED`. See [`docs/tool-parsers.md`](docs/tool-parsers.md).
+
 ### OSSTMM methodology coverage — the module checklist
 
 Enigma encodes the four OSSTMM 3 test phases and their **17 modules**, and maps
@@ -279,7 +294,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 161 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 190 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON, MCP + adapter demos
 docs/             architecture, authorization, assessment-model, verification, ...
@@ -291,7 +306,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 161 tests, no external network required
+python3 -m pytest          # 190 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

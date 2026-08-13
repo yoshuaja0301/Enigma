@@ -21,6 +21,7 @@ from typing import List, Optional
 import os
 
 from .agent.openclaw import StaticOpenClawAdapter
+from .agent.tools import parse_nuclei, parse_zap
 from .authorization.validator import AuthorizationValidator
 from .controller import AssessmentController
 from .core.configuration import load_assessment
@@ -45,9 +46,36 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 2
 
 
+def _collect_findings(args: argparse.Namespace) -> StaticOpenClawAdapter:
+    """Gather findings from --findings plus any --nuclei / --zap tool output."""
+
+    raw: List[dict] = []
+    if getattr(args, "findings", None):
+        raw.extend(StaticOpenClawAdapter.from_file(args.findings).get_findings(None))  # type: ignore[arg-type]
+    for path in getattr(args, "nuclei", None) or []:
+        raw.extend(parse_nuclei(path))
+    for path in getattr(args, "zap", None) or []:
+        raw.extend(parse_zap(path))
+    if not raw:
+        raise ValueError("no findings supplied — use --findings, --nuclei or --zap")
+    return StaticOpenClawAdapter(raw)
+
+
+def _add_findings_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--findings", default=None, help="path to findings JSON (list or {findings:[...]})")
+    parser.add_argument(
+        "--nuclei", action="append", default=[],
+        help="path to Nuclei JSONL output (repeatable); parsed into findings",
+    )
+    parser.add_argument(
+        "--zap", action="append", default=[],
+        help="path to an OWASP ZAP JSON report (repeatable); parsed into findings",
+    )
+
+
 def _cmd_verify(args: argparse.Namespace) -> int:
     assessment = load_assessment(args.assessment)
-    adapter = StaticOpenClawAdapter.from_file(args.findings)
+    adapter = _collect_findings(args)
 
     transport = FakeTransport() if args.offline else None
     controller = AssessmentController(transport=transport, evidence_dir=args.evidence_dir)
@@ -75,7 +103,7 @@ def _cmd_verify(args: argparse.Namespace) -> int:
 
 def _cmd_prove(args: argparse.Namespace) -> int:
     assessment = load_assessment(args.assessment)
-    adapter = StaticOpenClawAdapter.from_file(args.findings)
+    adapter = _collect_findings(args)
     transport = FakeTransport() if args.offline else None
     results = AssessmentController(transport=transport).run(assessment, adapter)
 
@@ -150,7 +178,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_verify = sub.add_parser("verify", help="verify findings for an assessment")
     p_verify.add_argument("--assessment", required=True, help="path to assessment JSON")
-    p_verify.add_argument("--findings", required=True, help="path to findings JSON (list or {findings:[...]})")
+    _add_findings_args(p_verify)
     p_verify.add_argument("--format", choices=["json", "md", "html"], default="md", help="report format")
     p_verify.add_argument("--output", default=None, help="write the report to a file instead of stdout")
     p_verify.add_argument("--evidence-dir", default=None, help="directory to persist sanitized evidence")
@@ -163,7 +191,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_prove = sub.add_parser("prove", help="verify findings and print a plain-language proof")
     p_prove.add_argument("--assessment", required=True, help="path to assessment JSON")
-    p_prove.add_argument("--findings", required=True, help="path to findings JSON")
+    _add_findings_args(p_prove)
     p_prove.add_argument("--id", default=None, help="prove only this finding id")
     p_prove.add_argument("--lang", choices=["en", "id"], default="en", help="plain-language register")
     p_prove.add_argument("--offline", action="store_true", help="use a fake transport (no network)")
