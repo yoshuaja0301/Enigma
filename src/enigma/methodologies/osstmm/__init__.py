@@ -2,6 +2,21 @@
 
 from .controls import CLASS_A, CLASS_B, Control
 from .mapper import OsstmmMapper
+from .modules import (
+    CHECK_MODULE_MAP,
+    INSTRUMENTS,
+    MODULES,
+    PHASE_NAMES,
+    CoverageReport,
+    Instrument,
+    Module,
+    ModuleCoverage,
+    Phase,
+    PhaseCoverage,
+    compute_module_coverage,
+    modules_in_phase,
+    resolve_instrument,
+)
 from .rav import (
     CHECK_CONTROL_MAP,
     CHECK_LIMITATION_MAP,
@@ -32,4 +47,17 @@ __all__ = [
     "LIMITATION_WEIGHTS",
     "CHECK_LIMITATION_MAP",
     "CHECK_CONTROL_MAP",
+    "Phase",
+    "PHASE_NAMES",
+    "Module",
+    "MODULES",
+    "modules_in_phase",
+    "Instrument",
+    "INSTRUMENTS",
+    "resolve_instrument",
+    "CHECK_MODULE_MAP",
+    "ModuleCoverage",
+    "PhaseCoverage",
+    "CoverageReport",
+    "compute_module_coverage",
 ]

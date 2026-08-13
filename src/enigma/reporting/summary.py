@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from ..findings.model import Verdict
+from ..methodologies.osstmm.modules import compute_module_coverage
 from ..methodologies.osstmm.rav import compute_rav
 
 
@@ -29,6 +30,7 @@ class Summary:
     osstmm_coverage: Dict[str, int] = field(default_factory=dict)
     # OSSTMM RAV, computed from verified observations only.
     rav: Dict[str, Any] = field(default_factory=dict)
+    osstmm_modules: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def confirmation_rate(self) -> float:
@@ -59,10 +61,11 @@ class Summary:
             "avg_ai_confidence_not_confirmed": round(self.avg_ai_confidence_not_confirmed, 3),
             "osstmm_coverage": self.osstmm_coverage,
             "rav": self.rav,
+            "osstmm_modules": self.osstmm_modules,
         }
 
 
-def summarize(results: List[Any]) -> Summary:
+def summarize(results: List[Any], instruments: Optional[List[str]] = None) -> Summary:
     summary = Summary(total=len(results))
     conf_confirmed: List[float] = []
     conf_not_confirmed: List[float] = []
@@ -93,6 +96,11 @@ def summarize(results: List[Any]) -> Summary:
     summary.avg_ai_confidence_not_confirmed = _mean(conf_not_confirmed)
     summary.osstmm_coverage = coverage
     summary.rav = compute_rav(results).to_dict() if results else {}
+    # Methodology coverage: declared instruments + the checks that actually ran.
+    summary.osstmm_modules = compute_module_coverage(
+        instruments=list(instruments or []) + ["enigma"],
+        checks=[r.finding.check for r in results if getattr(r.finding, "check", None)],
+    ).to_dict()
     return summary
 
 

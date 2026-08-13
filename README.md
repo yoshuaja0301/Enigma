@@ -178,6 +178,27 @@ The report served at `GET /report/{id}` adds a **▶ Prove it live** button per
 finding (`POST /prove`) that re-runs the check against the real target on demand
 and shows the fresh evidence. See [`docs/proof.md`](docs/proof.md).
 
+### OSSTMM methodology coverage — the module checklist
+
+Enigma encodes the four OSSTMM 3 test phases and their **17 modules**, and maps
+each testing instrument to the modules it exercises:
+
+| Instrument | Modules | Phase |
+|---|---|---|
+| Nmap | 4 Visibility Audit, 5 Access Verification | B |
+| WhatWeb | 9 Configuration, 12 Exposure Verification | C |
+| Nuclei | 12 Exposure Verification | C |
+| OWASP ZAP | 7 Controls, 12 Exposure Verification | B, C |
+| Enigma | 1 Posture Review (the authorization gate) + whatever its checks exercise | A, B, C |
+
+Declare them per assessment (`"instruments": ["nmap", "whatweb", ...]`) and every
+report gains a per-phase checklist **with attribution** — which instrument or
+check covered each module, and which modules remain uncovered (Phase D is not
+reachable non-intrusively, and is reported as such). Instruments record
+*methodological* coverage only: anything they find still passes through Enigma's
+verification before it can move a verdict or the RAV. See
+[`docs/osstmm-modules.md`](docs/osstmm-modules.md).
+
 ### OSSTMM RAV — a measured security score
 
 Beyond per-finding verdicts, Enigma computes an OSSTMM 3 **Risk Assessment
@@ -258,7 +279,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 147 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 161 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON, MCP + adapter demos
 docs/             architecture, authorization, assessment-model, verification, ...
@@ -270,7 +291,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 147 tests, no external network required
+python3 -m pytest          # 161 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

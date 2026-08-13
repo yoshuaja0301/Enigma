@@ -56,8 +56,39 @@ def _rav_section(rav: dict) -> List[str]:
     return lines
 
 
-def to_markdown(results: List[Any], summary: Optional[Summary] = None, title: str = "Enigma Assessment Report") -> str:
-    summary = summary or summarize(results)
+def _modules_section(modules: dict) -> List[str]:
+    """Render the OSSTMM module checklist (phases A–D)."""
+
+    if not modules or not modules.get("phases"):
+        return []
+    lines = ["", "## OSSTMM module coverage", ""]
+    instruments = modules.get("instruments") or []
+    if instruments:
+        lines.append(f"Instruments: {', '.join(instruments)}")
+        lines.append("")
+    covered, total = modules.get("covered_modules", 0), modules.get("total_modules", 0)
+    lines.append(f"**{covered} / {total} modules covered** ({modules.get('ratio', 0):.0%})")
+    lines.append("")
+    lines.append("| Phase | Module | Covered | By |")
+    lines.append("|---|---|---|---|")
+    for phase in modules["phases"]:
+        for module in phase["modules"]:
+            mark = "✅" if module["covered"] else "—"
+            by = ", ".join(module.get("covered_by") or []) or ""
+            lines.append(
+                f"| {phase['phase']} · {phase['name']} | {module['number']}. {module['name']} "
+                f"| {mark} | {by} |"
+            )
+    return lines
+
+
+def to_markdown(
+    results: List[Any],
+    summary: Optional[Summary] = None,
+    title: str = "Enigma Assessment Report",
+    instruments: Optional[List[str]] = None,
+) -> str:
+    summary = summary or summarize(results, instruments=instruments)
     lines: List[str] = []
     lines.append(f"# {title}")
     lines.append("")
@@ -102,4 +133,5 @@ def to_markdown(results: List[Any], summary: Optional[Summary] = None, title: st
             lines.append(f"- **Evidence:** `{result.evidence.evidence_id}`")
         lines.append("")
 
+    lines.extend(_modules_section(summary.osstmm_modules))
     return "\n".join(lines)

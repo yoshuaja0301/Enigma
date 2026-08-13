@@ -54,11 +54,15 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     results = controller.run(assessment, adapter)
 
     if args.format == "json":
-        rendered = to_json(results)
+        rendered = to_json(results, instruments=list(assessment.instruments))
     elif args.format == "html":
-        rendered = to_html(results, subtitle=f"Assessment {assessment.assessment_id} · target {assessment.target.url}")
+        rendered = to_html(
+            results,
+            subtitle=f"Assessment {assessment.assessment_id} · target {assessment.target.url}",
+            instruments=list(assessment.instruments),
+        )
     else:
-        rendered = to_markdown(results)
+        rendered = to_markdown(results, instruments=list(assessment.instruments))
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as handle:

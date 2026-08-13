@@ -54,8 +54,11 @@ class AssessmentController:
             results.append(result)
         return results
 
-    def summarize(self, results: List[VerificationResult]) -> Summary:
-        return summarize(results)
+    def summarize(
+        self, results: List[VerificationResult], assessment: Optional[Assessment] = None
+    ) -> Summary:
+        instruments = list(assessment.instruments) if assessment else None
+        return summarize(results, instruments=instruments)
 
     @property
     def evidence_store(self) -> EvidenceStore:

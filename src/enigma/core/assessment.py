@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from .target import Target
 
@@ -116,6 +116,10 @@ class Assessment:
     scope: Scope
     profile: AssessmentProfile = AssessmentProfile.SAFE_VERIFICATION
     methodology: str = "OSSTMM"
+    # Testing instruments declared for this assessment (e.g. nmap, whatweb,
+    # nuclei, zap). They record *methodological* module coverage; they are not
+    # evidence — anything they find still goes through Enigma's verification.
+    instruments: Tuple[str, ...] = ()
 
     @classmethod
     def from_dict(cls, data: dict) -> "Assessment":
@@ -130,6 +134,7 @@ class Assessment:
             scope=Scope.from_dict(data.get("scope")),
             profile=AssessmentProfile.parse(data.get("profile", "safe_verification")),
             methodology=str(data.get("methodology", "OSSTMM")),
+            instruments=tuple(str(i) for i in data.get("instruments", ())),
         )
 
     def to_dict(self) -> dict:
@@ -140,4 +145,5 @@ class Assessment:
             "scope": self.scope.to_dict(),
             "profile": self.profile.value,
             "methodology": self.methodology,
+            "instruments": list(self.instruments),
         }

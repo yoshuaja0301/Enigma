@@ -90,7 +90,7 @@ class EnigmaService:
             transport=self._transport, evidence_dir=self._evidence_dir
         )
         results = controller.run(assessment, adapter)
-        report = build_report(results)
+        report = build_report(results, instruments=list(assessment.instruments))
         self._results[assessment.assessment_id] = report
         # Remember enough to re-prove any single finding live.
         self._runs[assessment.assessment_id] = {
@@ -117,7 +117,7 @@ class EnigmaService:
         adapter = StaticOpenClawAdapter.from_data([finding.to_dict()])
         controller = AssessmentController(transport=self._transport)
         results = controller.run(run["assessment"], adapter)
-        report = build_report(results)
+        report = build_report(results, instruments=list(run["assessment"].instruments))
         result = report["results"][0]
         return {"finding_id": finding_id, "result": result, "proof": result.get("proof", {})}
 
