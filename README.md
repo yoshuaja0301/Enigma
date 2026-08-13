@@ -178,13 +178,15 @@ The report served at `GET /report/{id}` adds a **▶ Prove it live** button per
 finding (`POST /prove`) that re-runs the check against the real target on demand
 and shows the fresh evidence. See [`docs/proof.md`](docs/proof.md).
 
-### Feeding in Nuclei / OWASP ZAP output
+### Feeding in scanner output (Nuclei · ZAP · Nmap · WhatWeb)
 
 Scanners are finders too — their output is parsed into findings and **verified**,
 not trusted:
 
 ```bash
-enigma verify --assessment a.json --nuclei nuclei.jsonl --zap zap-report.json
+enigma verify --assessment a.json \
+  --nuclei nuclei.jsonl --zap zap-report.json \
+  --nmap scan.xml --whatweb whatweb.json
 ```
 
 Findings matching one of the nine checks are verified automatically; the rest
@@ -294,7 +296,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 190 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 214 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON, MCP + adapter demos
 docs/             architecture, authorization, assessment-model, verification, ...
@@ -306,7 +308,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 190 tests, no external network required
+python3 -m pytest          # 214 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

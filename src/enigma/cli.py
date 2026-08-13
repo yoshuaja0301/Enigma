@@ -21,7 +21,7 @@ from typing import List, Optional
 import os
 
 from .agent.openclaw import StaticOpenClawAdapter
-from .agent.tools import parse_nuclei, parse_zap
+from .agent.tools import parse_nmap, parse_nuclei, parse_whatweb, parse_zap
 from .authorization.validator import AuthorizationValidator
 from .controller import AssessmentController
 from .core.configuration import load_assessment
@@ -56,8 +56,14 @@ def _collect_findings(args: argparse.Namespace) -> StaticOpenClawAdapter:
         raw.extend(parse_nuclei(path))
     for path in getattr(args, "zap", None) or []:
         raw.extend(parse_zap(path))
+    for path in getattr(args, "nmap", None) or []:
+        raw.extend(parse_nmap(path))
+    for path in getattr(args, "whatweb", None) or []:
+        raw.extend(parse_whatweb(path))
     if not raw:
-        raise ValueError("no findings supplied — use --findings, --nuclei or --zap")
+        raise ValueError(
+            "no findings supplied — use --findings, --nuclei, --zap, --nmap or --whatweb"
+        )
     return StaticOpenClawAdapter(raw)
 
 
@@ -70,6 +76,14 @@ def _add_findings_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--zap", action="append", default=[],
         help="path to an OWASP ZAP JSON report (repeatable); parsed into findings",
+    )
+    parser.add_argument(
+        "--nmap", action="append", default=[],
+        help="path to Nmap XML output (nmap -oX, repeatable); parsed into findings",
+    )
+    parser.add_argument(
+        "--whatweb", action="append", default=[],
+        help="path to WhatWeb JSON output (--log-json, repeatable); parsed into findings",
     )
 
 

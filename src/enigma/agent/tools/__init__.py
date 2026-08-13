@@ -23,7 +23,9 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from ...core.assessment import Assessment
+from .nmap import NmapParseError, parse_nmap
 from .nuclei import parse_nuclei
+from .whatweb import parse_whatweb
 from .zap import parse_zap
 
 
@@ -49,5 +51,29 @@ class ToolFindingAdapter:
     def from_zap(cls, source) -> "ToolFindingAdapter":
         return cls(parse_zap(source), source="zap")
 
+    @classmethod
+    def from_nmap(cls, source) -> "ToolFindingAdapter":
+        return cls(parse_nmap(source), source="nmap")
 
-__all__ = ["parse_nuclei", "parse_zap", "ToolFindingAdapter"]
+    @classmethod
+    def from_whatweb(cls, source) -> "ToolFindingAdapter":
+        return cls(parse_whatweb(source), source="whatweb")
+
+
+# tool key -> parser, so callers can dispatch by name.
+PARSERS = {
+    "nuclei": parse_nuclei,
+    "zap": parse_zap,
+    "nmap": parse_nmap,
+    "whatweb": parse_whatweb,
+}
+
+__all__ = [
+    "parse_nuclei",
+    "parse_zap",
+    "parse_nmap",
+    "parse_whatweb",
+    "NmapParseError",
+    "PARSERS",
+    "ToolFindingAdapter",
+]
