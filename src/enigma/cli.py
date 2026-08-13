@@ -99,9 +99,13 @@ def _cmd_prove(args: argparse.Namespace) -> int:
             for ex in proof["exchanges"][:2]:
                 print(f"    → {ex['request']}")
                 print(f"    ← HTTP {ex['response_status']}")
-        print(f"  >> {proof['decisive']}")
+        print(f"  >> OBSERVED (fact): {proof['observation']}")
         rep = proof["reproduced"]
         print(f"  Repeated {rep['times']} time(s); {'same result each time' if rep['consistent'] else 'results varied'}.")
+        if proof.get("limits"):
+            print("  Limits of this verdict:")
+            for limit in proof["limits"]:
+                print(f"    - {limit}")
     print("=" * 72)
     return 0
 

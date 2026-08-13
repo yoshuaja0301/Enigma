@@ -125,6 +125,9 @@ table.idx th { color: var(--muted); font-size: 12px; text-transform: uppercase; 
 .prove-btn { cursor: pointer; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); border: none; border-radius: 8px; padding: 8px 14px; margin-top: 10px; }
 .prove-btn:disabled { opacity: .6; cursor: default; }
 .prove-out { margin-top: 10px; }
+.limits { margin-top: 10px; }
+.limits ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-size: 12.5px; }
+.limits li { margin: 3px 0; }
 """
 
 
@@ -286,6 +289,14 @@ def _proof_block(r: Dict[str, Any], interactive: bool) -> str:
             consistent = "same result each time" if rep.get("consistent") else "results varied"
             parts.append(
                 f'<div class="a">Repeated {escape(str(rep.get("times")))} time(s) — {consistent}.</div>'
+            )
+
+        limits = proof.get("limits") or []
+        if limits:
+            items = "".join(f"<li>{escape(str(limit))}</li>" for limit in limits)
+            parts.append(
+                "<details class=\"limits\"><summary>What this verdict does and does not establish</summary>"
+                f"<ul>{items}</ul></details>"
             )
 
         if interactive:

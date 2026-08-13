@@ -163,6 +163,64 @@ _HOW = {
     "id": "Kami hanya mengirim permintaan di bawah ini lalu membaca jawabannya — tanpa serangan, tanpa mengubah data.",
 }
 
+# --------------------------------------------------------------------------- #
+# Limits of what a verdict establishes.
+#
+# Enigma's *observations* are facts — they are bytes the server actually sent.
+# Its *conclusions* are claims resting on those facts. Stating the boundary is a
+# requirement of the framework, not a disclaimer: a reader must be able to
+# disagree with a conclusion while still trusting the observation.
+# --------------------------------------------------------------------------- #
+_LIMITS = {
+    "CONFIRMED": {
+        "en": [
+            "Establishes that the condition was present in the server's own reply, repeated consistently.",
+            "Does NOT establish exploitability or business impact — that requires human judgement.",
+            "Observed at one moment from one vantage point; caching, load balancing or a WAF may differ elsewhere.",
+        ],
+        "id": [
+            "Membuktikan kondisi itu ADA pada jawaban server sendiri, dan berulang konsisten.",
+            "TIDAK membuktikan bisa dieksploitasi atau seberapa besar dampaknya — itu perlu penilaian manusia.",
+            "Diamati pada satu waktu dari satu titik; cache, load balancer, atau WAF bisa berbeda di tempat lain.",
+        ],
+    },
+    "NOT_CONFIRMED": {
+        "en": [
+            "Means THIS check did not reproduce the condition — it does NOT mean the target is safe.",
+            "Absence of evidence here is not evidence of absence elsewhere (other paths, states or times).",
+        ],
+        "id": [
+            "Artinya cek INI tidak menemukan kondisi tersebut — BUKAN berarti target aman.",
+            "Tidak ditemukan di sini bukan berarti tidak ada di tempat lain (jalur, kondisi, atau waktu lain).",
+        ],
+    },
+    "INCONCLUSIVE": {
+        "en": [
+            "Enigma neither proved nor disproved this — treat it as an open question, not a result.",
+            "It carries no weight in the security score (RAV); only verified observations do.",
+        ],
+        "id": [
+            "Enigma tidak membuktikan maupun menyanggah ini — anggap pertanyaan terbuka, bukan hasil.",
+            "Tidak ikut menentukan skor keamanan (RAV); hanya observasi terverifikasi yang dihitung.",
+        ],
+    },
+}
+
+_REPORTED_LIMIT = {
+    "en": "This is OpenClaw's hypothesis only — Enigma performed no check on it. It is not evidence.",
+    "id": "Ini murni dugaan OpenClaw — Enigma tidak melakukan pengecekan apa pun. Bukan bukti.",
+}
+
+
+def verdict_limits(verdict: str, status: str = "", lang: str = "en") -> List[str]:
+    """What this verdict does — and does not — establish."""
+
+    entry = _LIMITS.get(verdict, _LIMITS["INCONCLUSIVE"])
+    limits = list(entry.get(lang, entry["en"]))
+    if status == "reported":
+        limits.insert(0, _REPORTED_LIMIT.get(lang, _REPORTED_LIMIT["en"]))
+    return limits
+
 
 def build_proof(result: Any, lang: str = "en") -> Dict[str, Any]:
     """Render a verification result into a human-readable proof."""
@@ -203,7 +261,13 @@ def build_proof(result: Any, lang: str = "en") -> Dict[str, Any]:
         "proven": proven,
         "verdict": result.verdict.value,
         "headline": headline,
-        "decisive": decisive,
+        # `observation` is a fact about what the server sent; `conclusion` is the
+        # claim Enigma draws from it. They are reported separately so a reader can
+        # accept the first while questioning the second.
+        "observation": decisive,
+        "conclusion": info["label"] if proven else None,
+        "decisive": decisive,  # retained: same text as `observation`
+        "limits": verdict_limits(result.verdict.value, getattr(result, "status", ""), lang),
         "exchanges": exchanges,
         "reproduced": {
             "times": result.probes_run,

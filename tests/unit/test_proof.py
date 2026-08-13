@@ -127,5 +127,40 @@ class LiveProveServiceTests(unittest.TestCase):
             self._service().prove("NOPE", "F-1")
 
 
+class LimitsTests(unittest.TestCase):
+    """Every verdict must state what it does NOT establish."""
+
+    def test_confirmed_states_it_does_not_prove_exploitability(self):
+        proof = build_proof(_results()[0])
+        joined = " ".join(proof["limits"]).lower()
+        self.assertTrue(proof["limits"])
+        self.assertIn("does not establish exploitability", joined)
+        # observation (fact) is kept separate from conclusion (claim)
+        self.assertTrue(proof["observation"])
+        self.assertEqual(proof["observation"], proof["decisive"])
+
+    def test_not_confirmed_does_not_claim_safety(self):
+        from enigma.explain import verdict_limits
+
+        joined = " ".join(verdict_limits("NOT_CONFIRMED")).lower()
+        self.assertIn("does not mean the target is safe", joined)
+
+    def test_reported_is_flagged_as_not_evidence(self):
+        from enigma.explain import verdict_limits
+
+        limits = verdict_limits("INCONCLUSIVE", status="reported")
+        self.assertIn("not evidence", " ".join(limits).lower())
+
+    def test_limits_available_in_indonesian(self):
+        from enigma.explain import verdict_limits
+
+        joined = " ".join(verdict_limits("NOT_CONFIRMED", lang="id")).lower()
+        self.assertIn("bukan berarti target aman", joined)
+
+    def test_limits_rendered_in_html(self):
+        html = to_html(_results())
+        self.assertIn("does and does not establish", html)
+
+
 if __name__ == "__main__":
     unittest.main()
