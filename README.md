@@ -216,6 +216,45 @@ reachable non-intrusively, and is reported as such). Instruments record
 verification before it can move a verdict or the RAV. See
 [`docs/osstmm-modules.md`](docs/osstmm-modules.md).
 
+### Per-source metrics — which finder's claims survive proof
+
+Enigma accepts findings from OpenClaw *and* from Nmap, WhatWeb, Nuclei and ZAP.
+Every report breaks the outcome down per finder (`summary.by_source`, a table in
+Markdown and HTML), so "how much of this source's output survived verification?"
+is a number rather than an impression:
+
+```
+| Source   | Findings | Confirmed | Not confirmed | Undecided | Confirmation rate | Avg. claimed conf. |
+|----------|----------|-----------|---------------|-----------|-------------------|--------------------|
+| zap      |        1 |         0 |             1 |         0 |                0% |               0.85 |
+| nuclei   |        1 |         1 |             0 |         0 |              100% |               0.30 |
+```
+
+Rates divide by **decided** findings (confirmed + not confirmed), never by the
+total: a finding Enigma could not judge is Enigma's limit, not the finder's
+error, so it is published as `undecided` instead of counted as a miss. See
+[`docs/metrics.md`](docs/metrics.md).
+
+### Run manifest — the report is checkable, not just readable
+
+Every report carries a `manifest`: the run's version, target, profile and UTC
+timestamp, the digest of the `summary`, plus one hash-chained entry per finding
+holding the digest of that finding **as published** (proof receipt included) and
+of its sanitized evidence.
+
+```python
+from enigma.evidence import verify_report
+verify_report(report)                  # [] when intact
+verify_report(report, evidence)        # also re-hash the stored artifacts
+```
+
+Rewrite a verdict, doctor a proof receipt, edit a metric, append a fabricated
+finding, reorder or drop an entry, or alter a stored evidence file — each comes
+back as a named problem. It proves the report and its evidence were not altered
+relative to each other; it is **not** a signature, since anyone who can rewrite
+the whole manifest can recompute the chain. See
+[`docs/evidence.md`](docs/evidence.md).
+
 ### OSSTMM RAV — a measured security score
 
 Beyond per-finding verdicts, Enigma computes an OSSTMM 3 **Risk Assessment
@@ -296,7 +335,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 214 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 269 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON, MCP + adapter demos
 docs/             architecture, authorization, assessment-model, verification, ...
@@ -308,7 +347,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 214 tests, no external network required
+python3 -m pytest          # 269 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

@@ -90,7 +90,9 @@ class EnigmaService:
             transport=self._transport, evidence_dir=self._evidence_dir
         )
         results = controller.run(assessment, adapter)
-        report = build_report(results, instruments=list(assessment.instruments))
+        report = build_report(
+            results, instruments=list(assessment.instruments), assessment=assessment
+        )
         self._results[assessment.assessment_id] = report
         # Remember enough to re-prove any single finding live.
         self._runs[assessment.assessment_id] = {
@@ -117,9 +119,20 @@ class EnigmaService:
         adapter = StaticOpenClawAdapter.from_data([finding.to_dict()])
         controller = AssessmentController(transport=self._transport)
         results = controller.run(run["assessment"], adapter)
-        report = build_report(results, instruments=list(run["assessment"].instruments))
+        report = build_report(
+            results,
+            instruments=list(run["assessment"].instruments),
+            assessment=run["assessment"],
+        )
         result = report["results"][0]
-        return {"finding_id": finding_id, "result": result, "proof": result.get("proof", {})}
+        return {
+            "finding_id": finding_id,
+            "result": result,
+            "proof": result.get("proof", {}),
+            # The live re-check is its own run: it gets its own manifest, so the
+            # fresh proof is stamped and chained just like the stored one.
+            "manifest": report.get("manifest", {}),
+        }
 
     def get_result(self, assessment_id: str) -> Optional[Dict[str, Any]]:
         """Return the most recent report for an assessment, if any."""

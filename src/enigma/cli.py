@@ -95,16 +95,21 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     controller = AssessmentController(transport=transport, evidence_dir=args.evidence_dir)
     results = controller.run(assessment, adapter)
 
+    # One summary and one manifest for the run, whichever format is rendered —
+    # so the chain binds exactly the numbers the report prints.
+    summary = controller.summarize(results, assessment)
+    manifest = controller.manifest(results, assessment, summary=summary)
     if args.format == "json":
-        rendered = to_json(results, instruments=list(assessment.instruments))
+        rendered = to_json(results, summary=summary, manifest=manifest)
     elif args.format == "html":
         rendered = to_html(
             results,
+            summary=summary,
             subtitle=f"Assessment {assessment.assessment_id} · target {assessment.target.url}",
-            instruments=list(assessment.instruments),
+            manifest=manifest,
         )
     else:
-        rendered = to_markdown(results, instruments=list(assessment.instruments))
+        rendered = to_markdown(results, summary=summary, manifest=manifest)
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as handle:

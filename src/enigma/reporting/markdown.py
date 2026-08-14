@@ -14,6 +14,63 @@ _VERDICT_ICON = {
 }
 
 
+def _by_source_section(by_source: dict) -> List[str]:
+    """Per-finder outcomes: how much of each source's output survived proof."""
+
+    if not by_source:
+        return []
+    lines = [
+        "## By source",
+        "",
+        "Rates are over **decided** findings (CONFIRMED + NOT_CONFIRMED). Findings",
+        "Enigma could not judge are counted as *undecided*, never held against the",
+        "finder.",
+        "",
+        "| Source | Findings | Confirmed | Not confirmed | Undecided | Confirmation rate | Avg. claimed conf. |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for name, stats in sorted(by_source.items(), key=lambda kv: (-kv[1].total, kv[0])):
+        rate = f"{stats.confirmation_rate:.0%}" if stats.decided else "n/a"
+        lines.append(
+            f"| `{name}` | {stats.total} | {stats.confirmed} | {stats.not_confirmed} | "
+            f"{stats.undecided} | {rate} | {stats.avg_claimed_confidence:.2f} |"
+        )
+    lines.append("")
+    return lines
+
+
+def _manifest_section(manifest: Any) -> List[str]:
+    """Render the run manifest — the integrity record for this report."""
+
+    if not manifest:
+        return []
+    data = manifest.to_dict() if hasattr(manifest, "to_dict") else dict(manifest)
+    lines = [
+        "",  # the preceding section ends on a table row; keep the heading separate
+        "## Run manifest",
+        "",
+        "| Field | Value |",
+        "|---|---|",
+        f"| Generated at (UTC) | {data.get('generated_at', '-')} |",
+        f"| Enigma version | {data.get('enigma_version', '-')} |",
+        f"| Python | {data.get('python_version', '-')} |",
+        f"| Assessment | {data.get('assessment_id') or '-'} |",
+        f"| Target | {data.get('target') or '-'} |",
+        f"| Profile | {data.get('profile') or '-'} |",
+        f"| Instruments | {', '.join(data.get('instruments') or []) or '-'} |",
+        f"| Findings recorded | {data.get('total', 0)} "
+        f"({data.get('with_evidence', 0)} with evidence) |",
+        f"| Digest | {data.get('digest_algorithm', '-')} |",
+        f"| Chain head | `{data.get('chain_head', '-')}` |",
+        "",
+        "The chain covers the summary above, every finding as published here, and",
+        "each evidence artifact: alter any of them and `chain head` no longer",
+        "matches. Re-check with `enigma.evidence.verify_report(report)`.",
+        "",
+    ]
+    return lines
+
+
 def _rav_section(rav: dict) -> List[str]:
     """Render the OSSTMM RAV block (empty when no RAV was computed)."""
 
@@ -87,6 +144,7 @@ def to_markdown(
     summary: Optional[Summary] = None,
     title: str = "Enigma Assessment Report",
     instruments: Optional[List[str]] = None,
+    manifest: Optional[Any] = None,
 ) -> str:
     summary = summary or summarize(results, instruments=instruments)
     lines: List[str] = []
@@ -106,6 +164,7 @@ def to_markdown(
     lines.append(f"| Confirmation rate | {summary.confirmation_rate:.0%} |")
     lines.append(f"| False-positive rate | {summary.false_positive_rate:.0%} |")
     lines.append("")
+    lines.extend(_by_source_section(summary.by_source))
     lines.extend(_rav_section(summary.rav))
     lines.append("## Findings")
     lines.append("")
@@ -134,4 +193,5 @@ def to_markdown(
         lines.append("")
 
     lines.extend(_modules_section(summary.osstmm_modules))
+    lines.extend(_manifest_section(manifest))
     return "\n".join(lines)

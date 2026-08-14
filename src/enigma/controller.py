@@ -20,6 +20,7 @@ from typing import List, Optional
 
 from .agent.openclaw import OpenClawAdapter
 from .core.assessment import Assessment
+from .evidence.manifest import RunManifest, build_manifest
 from .evidence.store import EvidenceStore
 from .findings.normalizer import FindingNormalizer
 from .methodologies.osstmm import OsstmmMapper
@@ -59,6 +60,29 @@ class AssessmentController:
     ) -> Summary:
         instruments = list(assessment.instruments) if assessment else None
         return summarize(results, instruments=instruments)
+
+    def manifest(
+        self,
+        results: List[VerificationResult],
+        assessment: Optional[Assessment] = None,
+        generated_at: Optional[str] = None,
+        summary: Optional[Summary] = None,
+    ) -> RunManifest:
+        """Tamper-evident record of this run (see `evidence/manifest.py`).
+
+        The chain covers the *published* form of each finding, so it is built
+        over the same records a report renders.
+        """
+
+        from .reporting.json import result_to_dict
+
+        return build_manifest(
+            results,
+            assessment=assessment,
+            generated_at=generated_at,
+            records=[result_to_dict(r) for r in results],
+            summary=summary if summary is not None else self.summarize(results, assessment),
+        )
 
     @property
     def evidence_store(self) -> EvidenceStore:
