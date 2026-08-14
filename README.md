@@ -120,12 +120,21 @@ enigma serve --port 8737 --token SECRET --allow-host authorized-target.example
 enigma mcp   --allow-host authorized-target.example      # for an AI agent
 ```
 
-**Runnable MCP demo** — a simulated OpenClaw agent verifies findings against a
-real local target over MCP (no install, no external network):
+**Runnable demos** — no install, no API key, no external network. Each starts a
+throwaway local target and verifies against it:
 
 ```bash
-python examples/mcp/openclaw_agent_demo.py
+python examples/live-demo/five_finders_demo.py   # all five finders + prove-it-live
+python examples/mcp/openclaw_agent_demo.py       # OpenClaw → Enigma over MCP
+python examples/openclaw/custom_adapter_demo.py  # LLM-style adapter end to end
 ```
+
+The [live demo](examples/live-demo/) is the one to run first: it feeds Enigma the
+output of OpenClaw, Nuclei, ZAP, Nmap and WhatWeb at once, shows a *High
+confidence* scanner alert being refuted by the server and a 0.30 one confirmed,
+catches a forged report via the manifest, then **fixes the target mid-run** and
+re-proves the same finding — watching the verdict flip while the stored record
+stays put.
 
 Safety for exposed deployments: set a bearer token (`--token` / `ENIGMA_API_TOKEN`)
 and a server-side host allowlist (`--allow-host`) so an endpoint can't be turned
@@ -335,9 +344,11 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 269 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 279 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
-examples/         assessment / findings / verification-result JSON, MCP + adapter demos
+examples/         assessment / findings / verification-result JSON
+  live-demo/      five finders vs one live target, manifest + prove-it-live (start here)
+  mcp/ openclaw/  MCP and custom-adapter demos
 docs/             architecture, authorization, assessment-model, verification, ...
 .github/          CI: full suite on Python 3.9–3.13 + CLI/demo smoke tests
 ```
@@ -347,7 +358,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 269 tests, no external network required
+python3 -m pytest          # 279 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

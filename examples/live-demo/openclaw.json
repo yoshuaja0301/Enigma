@@ -1,0 +1,47 @@
+[
+  {
+    "finding_id": "OC-001",
+    "title": "Page can be framed by another site (clickjacking)",
+    "category": "clickjacking",
+    "confidence": 0.45,
+    "target": {
+      "path": "/"
+    },
+    "check": "clickjacking"
+  },
+  {
+    "finding_id": "OC-002",
+    "title": "Cart price can be tampered with via a parameter",
+    "category": "business_logic",
+    "confidence": 0.93,
+    "target": {
+      "path": "/checkout"
+    }
+  },
+  {
+    "finding_id": "OC-003",
+    "title": "/secure does not set a Content-Security-Policy",
+    "category": "missing_security_header",
+    "confidence": 0.8,
+    "target": {
+      "path": "/secure"
+    },
+    "check": "security_header",
+    "parameters": {
+      "header": "Content-Security-Policy"
+    }
+  },
+  {
+    "finding_id": "OC-004",
+    "title": "Search input is reflected into the page",
+    "category": "reflection",
+    "confidence": 0.6,
+    "target": {
+      "path": "/search"
+    },
+    "check": "reflection",
+    "parameters": {
+      "parameter": "q"
+    }
+  }
+]

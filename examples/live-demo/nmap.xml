@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" version="7.94" args="nmap -sV -oX - 127.0.0.1">
+  <host>
+    <status state="up"/>
+    <address addr="127.0.0.1" addrtype="ipv4"/>
+    <hostnames><hostname name="127.0.0.1" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="8901">
+        <state state="open" reason="syn-ack"/>
+        <service name="http" product="nginx" version="1.18.0" method="probe"/>
+        <script id="http-methods" output="Supported Methods: GET HEAD POST OPTIONS TRACE"/>
+      </port>
+      <port protocol="tcp" portid="22">
+        <state state="open" reason="syn-ack"/>
+        <service name="ssh" product="OpenSSH" version="8.9p1"/>
+      </port>
+      <port protocol="tcp" portid="3306">
+        <state state="closed" reason="reset"/>
+        <service name="mysql"/>
+      </port>
+    </ports>
+  </host>
+</nmaprun>

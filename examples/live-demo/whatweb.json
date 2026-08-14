@@ -1,0 +1,28 @@
+[
+  {
+    "target": "http://127.0.0.1:8901/",
+    "http_status": 200,
+    "plugins": {
+      "HTTPServer": {
+        "string": [
+          "nginx/1.18.0"
+        ]
+      },
+      "Title": {
+        "string": [
+          "Toko Demo"
+        ]
+      },
+      "IP": {
+        "string": [
+          "127.0.0.1"
+        ]
+      },
+      "Cookies": {
+        "string": [
+          "sid"
+        ]
+      }
+    }
+  }
+]

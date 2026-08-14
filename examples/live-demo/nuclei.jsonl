@@ -1,0 +1,2 @@
+{"template-id": "http-missing-security-headers", "matcher-name": "content-security-policy", "info": {"name": "Missing Security Headers", "severity": "info", "tags": ["misconfig", "headers"]}, "host": "127.0.0.1:8901", "matched-at": "http://127.0.0.1:8901/"}
+{"template-id": "dir-listing", "info": {"name": "Directory Listing Enabled", "severity": "medium", "tags": ["exposure"]}, "host": "127.0.0.1:8901", "matched-at": "http://127.0.0.1:8901/uploads/"}
