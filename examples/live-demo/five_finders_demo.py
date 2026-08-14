@@ -65,7 +65,7 @@ class _Target(BaseHTTPRequestHandler):
             self.send_header(key, value)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        if body:
+        if body and not getattr(self, "_head_only", False):
             self.wfile.write(body)
 
     def do_GET(self):
@@ -108,7 +108,10 @@ class _Target(BaseHTTPRequestHandler):
             )
 
     def do_HEAD(self):
-        self._send(200, [])
+        # A HEAD reply carries the same headers as the GET, minus the body —
+        # otherwise `curl -I` misreports whether this target is hardened.
+        self._head_only = True
+        self.do_GET()
 
     def do_OPTIONS(self):
         self._send(200, [("Allow", "GET, HEAD, POST, OPTIONS")])
