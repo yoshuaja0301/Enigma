@@ -25,7 +25,7 @@ from .agent.tools import parse_nmap, parse_nuclei, parse_whatweb, parse_zap
 from .authorization.validator import AuthorizationValidator
 from .controller import AssessmentController
 from .core.configuration import load_assessment
-from .explain import build_proof
+from .explain import build_proof, ui_labels
 from .reporting import to_html, to_json, to_markdown
 from .service import EnigmaService
 from .verification.http import FakeTransport
@@ -132,25 +132,32 @@ def _cmd_prove(args: argparse.Namespace) -> int:
             print(f"error: no finding with id {args.id!r}", file=sys.stderr)
             return 1
 
-    icon = {"CONFIRMED": "PROVEN", "NOT_CONFIRMED": "not a problem", "INCONCLUSIVE": "unproven"}
+    ui = ui_labels(args.lang)
+    # Pad so the colons line up whatever the language's word lengths are.
+    width = max(len(ui[k]) for k in ("what", "why", "how"))
     for r in results:
         proof = build_proof(r, lang=args.lang)
         print("=" * 72)
         verdict = r.verdict.value
-        print(f"{r.finding.finding_id}  [{icon.get(verdict, verdict)}]  {proof['label']}")
-        print(f"  What it means : {proof['what']}")
-        print(f"  Why it matters: {proof['why']}")
-        print(f"  How we checked: {proof['how']}")
+        print(f"{r.finding.finding_id}  [{ui.get(verdict, verdict)}]  {proof['label']}")
+        print(f"  {ui['what']:<{width}}: {proof['what']}")
+        print(f"  {ui['why']:<{width}}: {proof['why']}")
+        print(f"  {ui['how']:<{width}}: {proof['how']}")
         if proof["exchanges"]:
-            print("  Proof (what we sent and got back):")
+            print(f"  {ui['proof']}")
             for ex in proof["exchanges"][:2]:
                 print(f"    → {ex['request']}")
                 print(f"    ← HTTP {ex['response_status']}")
-        print(f"  >> OBSERVED (fact): {proof['observation']}")
+        print(f"  {ui['observed']} {proof['observation']}")
         rep = proof["reproduced"]
-        print(f"  Repeated {rep['times']} time(s); {'same result each time' if rep['consistent'] else 'results varied'}.")
+        if not rep["times"]:
+            print(f"  {ui['not_probed']}")
+        else:
+            print("  " + ui["repeated"].format(
+                times=rep["times"],
+                consistency=ui["consistent"] if rep["consistent"] else ui["varied"]))
         if proof.get("limits"):
-            print("  Limits of this verdict:")
+            print(f"  {ui['limits']}")
             for limit in proof["limits"]:
                 print(f"    - {limit}")
     print("=" * 72)

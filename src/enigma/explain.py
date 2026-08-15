@@ -15,7 +15,7 @@ collected. For a *live* re-proof see ``EnigmaService.prove`` and ``enigma prove`
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .findings.model import Verdict
 
@@ -116,46 +116,163 @@ def explain_check(check: Optional[str], lang: str = "en") -> Dict[str, str]:
 # --------------------------------------------------------------------------- #
 # The decisive fact, stated plainly from what was actually observed.
 # --------------------------------------------------------------------------- #
-def _decisive(check: Optional[str], obs: Dict[str, Any]) -> str:
+def _decisive_key(check: Optional[str], obs: Dict[str, Any]) -> Tuple[str, Dict[str, str]]:
+    """Pick WHICH statement the observation supports, plus its parameters.
+
+    What the server did is decided here, once, from the observation alone. The
+    wording per language lives in `_DECISIVE`. Keeping them apart is the point:
+    adding a language must never be able to change which fact gets stated.
+    """
     if check == "security_header":
         h = obs.get("header", "the header")
-        return (f"The reply did NOT include the '{h}' header."
-                if not obs.get("present") else f"The reply DID include '{h}'.")
+        state = "present" if obs.get("present") else "absent"
+        return f"security_header.{state}", {"header": h}
     if check == "reflection":
-        return ("The exact text we sent came back inside the page."
-                if obs.get("marker_reflected") else "The text we sent did not appear in the page.")
+        return ("reflection." + ("yes" if obs.get("marker_reflected") else "no")), {}
     if check == "http_method":
         m = obs.get("method", "the method")
         adv = obs.get("advertised") or []
-        return (f"The server's 'Allow' list advertises {m}: {', '.join(adv)}."
-                if m in adv else f"The server's 'Allow' list does not include {m}.")
+        if m in adv:
+            return "http_method.advertised", {"method": m, "advertised": ", ".join(adv)}
+        return "http_method.absent", {"method": m}
     if check == "cookie_flags":
         flag = obs.get("flag", "the flag")
         missing = obs.get("cookies_missing_flag") or []
-        return (f"Cookie(s) {', '.join(missing)} were set without the {flag} flag."
-                if missing else f"Every cookie carried the {flag} flag.")
+        if missing:
+            return "cookie_flags.missing", {"cookies": ", ".join(missing), "flag": flag}
+        return "cookie_flags.all_present", {"flag": flag}
     if check == "cors":
         if obs.get("credentialed_reflection"):
-            return "The server echoed our Origin AND allows credentials — the dangerous combination."
+            return "cors.credentialed", {}
         if obs.get("reflects_origin"):
-            return "The server echoed back the arbitrary Origin we sent."
+            return "cors.reflects", {}
         if obs.get("wildcard"):
-            return "The server allows any origin ('*')."
-        return "The server did not reflect our Origin."
+            return "cors.wildcard", {}
+        return "cors.none", {}
     if check == "tls_redirect":
-        return ("Plain HTTP was served without redirecting to HTTPS."
-                if not obs.get("redirects_to_https") else "HTTP was redirected to HTTPS.")
+        state = "redirects" if obs.get("redirects_to_https") else "plain"
+        return f"tls_redirect.{state}", {}
     if check == "clickjacking":
-        return ("The page can be framed (no X-Frame-Options and no CSP frame-ancestors)."
-                if obs.get("frameable") else "The page is protected against framing.")
+        state = "frameable" if obs.get("frameable") else "protected"
+        return f"clickjacking.{state}", {}
     if check == "directory_listing":
-        return (f"The reply looked like a directory index (matched '{obs.get('signature')}')."
-                if obs.get("listing_detected") else "The reply was not a directory listing.")
+        if obs.get("listing_detected"):
+            return "directory_listing.yes", {"signature": str(obs.get("signature"))}
+        return "directory_listing.no", {}
     if check == "server_version":
         disclosures = obs.get("disclosures") or {}
-        return ("The server disclosed: " + "; ".join(f"{k}: {v}" for k, v in disclosures.items())
-                if disclosures else "No server/version banner was disclosed.")
-    return "See the observations for details."
+        if disclosures:
+            joined = "; ".join(f"{k}: {v}" for k, v in disclosures.items())
+            return "server_version.disclosed", {"disclosures": joined}
+        return "server_version.none", {}
+    return "fallback", {}
+
+
+# Wording only. Every entry states the same fact in both registers; none of them
+# may hedge a fact the other asserts.
+_DECISIVE = {
+    "security_header.absent": {
+        "en": "The reply did NOT include the '{header}' header.",
+        "id": "Jawaban server TIDAK memuat header '{header}'."},
+    "security_header.present": {
+        "en": "The reply DID include '{header}'.",
+        "id": "Jawaban server MEMUAT '{header}'."},
+    "reflection.yes": {
+        "en": "The exact text we sent came back inside the page.",
+        "id": "Teks persis yang kami kirim muncul kembali di dalam halaman."},
+    "reflection.no": {
+        "en": "The text we sent did not appear in the page.",
+        "id": "Teks yang kami kirim tidak muncul di halaman."},
+    "http_method.advertised": {
+        "en": "The server's 'Allow' list advertises {method}: {advertised}.",
+        "id": "Daftar 'Allow' server mencantumkan {method}: {advertised}."},
+    "http_method.absent": {
+        "en": "The server's 'Allow' list does not include {method}.",
+        "id": "Daftar 'Allow' server tidak mencantumkan {method}."},
+    "cookie_flags.missing": {
+        "en": "Cookie(s) {cookies} were set without the {flag} flag.",
+        "id": "Cookie {cookies} diset tanpa flag {flag}."},
+    "cookie_flags.all_present": {
+        "en": "Every cookie carried the {flag} flag.",
+        "id": "Semua cookie membawa flag {flag}."},
+    "cors.credentialed": {
+        "en": "The server echoed our Origin AND allows credentials — the dangerous combination.",
+        "id": "Server memantulkan Origin kami DAN mengizinkan kredensial — kombinasi yang berbahaya."},
+    "cors.reflects": {
+        "en": "The server echoed back the arbitrary Origin we sent.",
+        "id": "Server memantulkan kembali Origin sembarang yang kami kirim."},
+    "cors.wildcard": {
+        "en": "The server allows any origin ('*').",
+        "id": "Server mengizinkan origin mana pun ('*')."},
+    "cors.none": {
+        "en": "The server did not reflect our Origin.",
+        "id": "Server tidak memantulkan Origin kami."},
+    "tls_redirect.plain": {
+        "en": "Plain HTTP was served without redirecting to HTTPS.",
+        "id": "HTTP biasa dilayani tanpa dialihkan ke HTTPS."},
+    "tls_redirect.redirects": {
+        "en": "HTTP was redirected to HTTPS.",
+        "id": "HTTP dialihkan ke HTTPS."},
+    "clickjacking.frameable": {
+        "en": "The page can be framed (no X-Frame-Options and no CSP frame-ancestors).",
+        "id": "Halaman bisa di-frame (tanpa X-Frame-Options dan tanpa CSP frame-ancestors)."},
+    "clickjacking.protected": {
+        "en": "The page is protected against framing.",
+        "id": "Halaman terlindungi dari framing."},
+    "directory_listing.yes": {
+        "en": "The reply looked like a directory index (matched '{signature}').",
+        "id": "Jawaban server tampak seperti indeks direktori (cocok dengan '{signature}')."},
+    "directory_listing.no": {
+        "en": "The reply was not a directory listing.",
+        "id": "Jawaban server bukan daftar isi direktori."},
+    "server_version.disclosed": {
+        "en": "The server disclosed: {disclosures}",
+        "id": "Server menyingkapkan: {disclosures}"},
+    "server_version.none": {
+        "en": "No server/version banner was disclosed.",
+        "id": "Tidak ada banner server/versi yang disingkapkan."},
+    "fallback": {
+        "en": "See the observations for details.",
+        "id": "Lihat bagian observasi untuk detailnya."},
+}
+
+
+def _decisive(check: Optional[str], obs: Dict[str, Any], lang: str = "en") -> str:
+    key, params = _decisive_key(check, obs)
+    wording = _DECISIVE[key]
+    return wording.get(lang, wording["en"]).format(**params)
+
+
+# The engine states its `reason` once, in English, because it is a stable field
+# that reports and tests read. Translating it is this layer's job; an unknown
+# reason passes through untouched rather than being silently dropped.
+_REASONS = {
+    "condition consistently observed across probes":
+        "kondisi teramati konsisten di seluruh probe",
+    "expected condition was not reproduced":
+        "kondisi yang diharapkan tidak terulang",
+    "inconsistent results across probes":
+        "hasil tidak konsisten antar probe",
+    "no automatic check for this finding type; reported for review":
+        "tidak ada pemeriksaan otomatis untuk jenis temuan ini; dicatat untuk ditinjau",
+    "no successful probes": "tidak ada probe yang berhasil",
+}
+
+
+def translate_reason(reason: str, lang: str = "en") -> str:
+    """Render an engine reason in `lang`, passing unknown text through."""
+    if lang == "en" or not reason:
+        return reason
+    if reason in _REASONS:
+        return _REASONS[reason]
+    if reason.startswith("all probes failed: "):
+        return "semua probe gagal: " + reason[len("all probes failed: "):]
+    if reason.startswith("procedure '") and reason.endswith("' requires additional parameters"):
+        name = reason[len("procedure '"):-len("' requires additional parameters")]
+        return f"prosedur '{name}' butuh parameter tambahan"
+    if reason.startswith("ASSESSMENT BLOCKED"):
+        return reason.replace("ASSESSMENT BLOCKED", "ASESMEN DIBLOKIR", 1)
+    return reason
 
 
 _HOW = {
@@ -222,6 +339,44 @@ def verdict_limits(verdict: str, status: str = "", lang: str = "en") -> List[str
     return limits
 
 
+# Labels for the surfaces that render a proof. Kept here beside the rest of the
+# translations so a new language is one file to edit, not a hunt through the CLI.
+_UI = {
+    "en": {
+        "what": "What it means", "why": "Why it matters", "how": "How we checked",
+        "proof": "Proof (what we sent and got back):",
+        "observed": ">> OBSERVED (fact):",
+        "repeated": "Repeated {times} time(s); {consistency}.",
+        "consistent": "same result each time", "varied": "results varied",
+        # 0 probes is neither consistent nor varied — say what happened instead.
+        "not_probed": "Not probed — nothing was sent for this finding.",
+        "limits": "Limits of this verdict:",
+        "headline_proven": "Proven", "headline_not_confirmed": "Not confirmed",
+        "CONFIRMED": "PROVEN", "NOT_CONFIRMED": "not a problem",
+        "INCONCLUSIVE": "unproven",
+    },
+    "id": {
+        "what": "Artinya", "why": "Kenapa penting", "how": "Cara kami cek",
+        "proof": "Bukti (yang kami kirim dan yang dibalas):",
+        "observed": ">> DIAMATI (fakta):",
+        "repeated": "Diulang {times} kali; {consistency}.",
+        "consistent": "hasilnya sama tiap kali", "varied": "hasilnya berbeda-beda",
+        "not_probed": "Tidak diprobe — tidak ada permintaan yang dikirim untuk temuan ini.",
+        "limits": "Batas dari putusan ini:",
+        "headline_proven": "Terbukti", "headline_not_confirmed": "Tidak terbukti",
+        "CONFIRMED": "TERBUKTI", "NOT_CONFIRMED": "bukan masalah",
+        "INCONCLUSIVE": "belum terbukti",
+    },
+}
+
+
+def ui_labels(lang: str = "en") -> Dict[str, str]:
+    """Labels for rendering a proof, falling back to English per key."""
+    merged = dict(_UI["en"])
+    merged.update(_UI.get(lang, {}))
+    return merged
+
+
 def build_proof(result: Any, lang: str = "en") -> Dict[str, Any]:
     """Render a verification result into a human-readable proof."""
 
@@ -229,7 +384,8 @@ def build_proof(result: Any, lang: str = "en") -> Dict[str, Any]:
     info = explain_check(check, lang)
     observations: List[Dict[str, Any]] = list(getattr(result, "observations", []) or [])
     obs0 = observations[0] if observations else {}
-    decisive = _decisive(check, obs0) if observations else result.reason
+    decisive = (_decisive(check, obs0, lang) if observations
+                else translate_reason(result.reason, lang))
 
     exchanges = []
     evidence = getattr(result, "evidence", None)
@@ -246,10 +402,11 @@ def build_proof(result: Any, lang: str = "en") -> Dict[str, Any]:
         )
 
     proven = result.verdict is Verdict.CONFIRMED
+    ui = ui_labels(lang)
     if proven:
-        headline = f"Proven: {decisive}"
+        headline = f"{ui['headline_proven']}: {decisive}"
     elif result.verdict is Verdict.NOT_CONFIRMED:
-        headline = f"Not confirmed: {decisive}"
+        headline = f"{ui['headline_not_confirmed']}: {decisive}"
     else:
         headline = info["what"]
 
