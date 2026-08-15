@@ -1,0 +1,23 @@
+{
+  "assessment_id": "ASM-LIVE-DEMO",
+  "target": {
+    "url": "http://127.0.0.1:8901/"
+  },
+  "authorization": {
+    "status": "authorized",
+    "reference": "DEMO \u2014 local throwaway target owned by this repo",
+    "authorized_by": "Enigma demo"
+  },
+  "scope": {
+    "allowed_hosts": [
+      "127.0.0.1"
+    ]
+  },
+  "profile": "safe_verification",
+  "instruments": [
+    "nmap",
+    "whatweb",
+    "nuclei",
+    "zap"
+  ]
+}

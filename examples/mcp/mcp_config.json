@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "enigma": {
+      "command": "enigma",
+      "args": ["mcp", "--allow-host", "authorized-target.example"],
+      "env": {
+        "ENIGMA_API_TOKEN": ""
+      }
+    }
+  }
+}

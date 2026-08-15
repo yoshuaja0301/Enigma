@@ -1,0 +1,48 @@
+{
+  "site": [
+    {
+      "@name": "http://127.0.0.1:8901",
+      "alerts": [
+        {
+          "pluginid": "10038",
+          "alert": "Content Security Policy (CSP) Header Not Set",
+          "riskcode": "2",
+          "confidence": "3",
+          "cweid": "693",
+          "instances": [
+            {
+              "uri": "http://127.0.0.1:8901/secure",
+              "method": "GET"
+            }
+          ]
+        },
+        {
+          "pluginid": "10010",
+          "alert": "Cookie No HttpOnly Flag",
+          "riskcode": "1",
+          "confidence": "3",
+          "cweid": "1004",
+          "instances": [
+            {
+              "uri": "http://127.0.0.1:8901/",
+              "method": "GET",
+              "param": "sid"
+            }
+          ]
+        },
+        {
+          "pluginid": "10033",
+          "alert": "Directory Browsing",
+          "riskcode": "2",
+          "confidence": "2",
+          "instances": [
+            {
+              "uri": "http://127.0.0.1:8901/uploads/",
+              "method": "GET"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
