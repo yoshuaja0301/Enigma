@@ -351,7 +351,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 300 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 303 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON
   live-demo/      five finders vs one live target, manifest + prove-it-live (start here)
@@ -365,7 +365,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 300 tests, no external network required
+python3 -m pytest          # 303 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

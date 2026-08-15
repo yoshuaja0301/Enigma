@@ -21,7 +21,7 @@ authorized to assess — the gate will block it, but don't rely on that.
 
 ```bash
 which enigma || pip install -e ".[dev]"
-python -m pytest -q          # full suite, no network needed (300 at time of writing)
+python -m pytest -q          # full suite, no network needed (303 at time of writing)
 ```
 
 ## 1. Start the target
