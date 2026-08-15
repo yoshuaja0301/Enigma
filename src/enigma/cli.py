@@ -7,9 +7,11 @@ Subcommands:
         report ALLOWED or ASSESSMENT BLOCKED. Sends no probes.
 
     enigma verify --assessment ASSESSMENT.json --findings FINDINGS.json
-                  [--format json|md] [--evidence-dir DIR] [--offline]
+                  [--format json|md|html] [--lang en|id] [--evidence-dir DIR]
+                  [--offline]
         Normalize the (OpenClaw) findings, verify each within scope/policy, map
-        to OSSTMM and print a report.
+        to OSSTMM and print a report. --lang selects the language of the md/html
+        report; json is always English, being the machine contract.
 """
 
 from __future__ import annotations
@@ -100,6 +102,8 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     summary = controller.summarize(results, assessment)
     manifest = controller.manifest(results, assessment, summary=summary)
     if args.format == "json":
+        # JSON stays in one language: it is the machine contract, and a report
+        # stored in a different language could not be compared with the rest.
         rendered = to_json(results, summary=summary, manifest=manifest)
     elif args.format == "html":
         rendered = to_html(
@@ -107,9 +111,10 @@ def _cmd_verify(args: argparse.Namespace) -> int:
             summary=summary,
             subtitle=f"Assessment {assessment.assessment_id} · target {assessment.target.url}",
             manifest=manifest,
+            lang=args.lang,
         )
     else:
-        rendered = to_markdown(results, summary=summary, manifest=manifest)
+        rendered = to_markdown(results, summary=summary, manifest=manifest, lang=args.lang)
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as handle:
@@ -206,6 +211,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_verify.add_argument("--assessment", required=True, help="path to assessment JSON")
     _add_findings_args(p_verify)
     p_verify.add_argument("--format", choices=["json", "md", "html"], default="md", help="report format")
+    p_verify.add_argument(
+        "--lang", choices=["en", "id"], default="en",
+        help="language for the md/html report (json is always English)",
+    )
     p_verify.add_argument("--output", default=None, help="write the report to a file instead of stdout")
     p_verify.add_argument("--evidence-dir", default=None, help="directory to persist sanitized evidence")
     p_verify.add_argument(

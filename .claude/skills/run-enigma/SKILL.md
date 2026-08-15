@@ -21,7 +21,7 @@ authorized to assess — the gate will block it, but don't rely on that.
 
 ```bash
 which enigma || pip install -e ".[dev]"
-python -m pytest -q          # full suite, no network needed (279 at time of writing)
+python -m pytest -q          # full suite, no network needed (300 at time of writing)
 ```
 
 ## 1. Start the target
@@ -143,6 +143,7 @@ S=.claude/skills/run-enigma/scripts/shoot.sh
 $S http://127.0.0.1:8738/ /tmp/dashboard.png 1280 700
 $S http://127.0.0.1:8738/report/ASM-LIVE-DEMO /tmp/report.png 1280 1500
 $S http://127.0.0.1:8738/report/ASM-LIVE-DEMO /tmp/card.png 1280 1150 1180  # scrolled to the cards
+$S "http://127.0.0.1:8738/report/ASM-LIVE-DEMO?lang=id" /tmp/card-id.png 1280 1150 1180
 ```
 
 That last offset is content-dependent — the summary and by-source tables grow
@@ -173,6 +174,7 @@ enigma verify --assessment $D/assessment.json --findings $D/openclaw.json --form
 enigma verify --assessment $D/assessment.json --nuclei $D/nuclei.jsonl \
   --zap $D/zap.json --nmap $D/nmap.xml --whatweb $D/whatweb.json --format md
 enigma prove --assessment $D/assessment.json --findings $D/openclaw.json --id OC-001 --lang id
+enigma verify --assessment $D/assessment.json --findings $D/openclaw.json --format md --lang id
 python examples/mcp/openclaw_agent_demo.py    # MCP end to end, starts its own target
 ```
 

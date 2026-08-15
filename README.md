@@ -183,6 +183,13 @@ it. And it can be **re-proven live**:
 enigma prove --assessment a.json --findings f.json --id F-1 --lang id
 ```
 
+The whole report renders in either language — `enigma verify --lang id` for the
+Markdown/HTML report, and `?lang=id` on the served page. JSON stays English: it
+is the machine contract, and reports stored in different languages could not be
+compared. OSSTMM's own vocabulary (channels, controls, the 17 module names, RAV
+grades) is never translated, so a reader can always trace a finding back to the
+methodology.
+
 The report served at `GET /report/{id}` adds a **▶ Prove it live** button per
 finding (`POST /prove`) that re-runs the check against the real target on demand
 and shows the fresh evidence. See [`docs/proof.md`](docs/proof.md).
@@ -344,7 +351,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 279 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 300 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON
   live-demo/      five finders vs one live target, manifest + prove-it-live (start here)
@@ -358,7 +365,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 279 tests, no external network required
+python3 -m pytest          # 300 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

@@ -22,12 +22,14 @@ from __future__ import annotations
 from html import escape
 from typing import Any, Dict, List, Optional
 
+from ..explain import localize_proof, report_labels, translate_reason
 from .json import build_report
 
+# (css class, icon, label key) — the label is looked up per language.
 _VERDICT_META = {
-    "CONFIRMED": ("confirmed", "✓", "Confirmed"),
-    "NOT_CONFIRMED": ("not-confirmed", "✕", "Not confirmed"),
-    "INCONCLUSIVE": ("inconclusive", "!", "Inconclusive"),
+    "CONFIRMED": ("confirmed", "✓", "confirmed"),
+    "NOT_CONFIRMED": ("not-confirmed", "✕", "not_confirmed"),
+    "INCONCLUSIVE": ("inconclusive", "!", "inconclusive"),
 }
 
 _CSS = """
@@ -131,9 +133,9 @@ table.idx th { color: var(--muted); font-size: 12px; text-transform: uppercase; 
 """
 
 
-def _doc(title: str, body: str) -> str:
+def _doc(title: str, body: str, lang: str = "en") -> str:
     return (
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        f"<!doctype html><html lang=\"{lang}\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
         f"<title>{escape(title)}</title><style>{_CSS}</style></head>"
         f"<body><div class=\"wrap\">{body}</div></body></html>"
@@ -151,21 +153,21 @@ def _kpi(n: Any, label: str, cls: str = "") -> str:
     return f'<div class="kpi {cls}"><div class="n">{escape(str(n))}</div><div class="l">{escape(label)}</div></div>'
 
 
-def _summary_block(summary: Dict[str, Any]) -> str:
+def _summary_block(summary: Dict[str, Any], t: Dict[str, str]) -> str:
     conf_rate = _pct(summary.get("confirmation_rate", 0))
     fp_rate = _pct(summary.get("false_positive_rate", 0))
     tiles = [
-        _kpi(summary.get("total", 0), "Findings"),
-        _kpi(summary.get("confirmed", 0), "Confirmed", "ok"),
-        _kpi(summary.get("not_confirmed", 0), "Not confirmed", "bad"),
-        _kpi(summary.get("inconclusive", 0), "Inconclusive", "warn"),
-        _kpi(summary.get("reported", 0), "Reported", "warn"),
-        _kpi(summary.get("blocked", 0), "Blocked", "neutral"),
-        _kpi(summary.get("reproducible", 0), "Reproducible"),
-        _kpi(f"{conf_rate}%", "Confirmation rate", "ok"),
-        _kpi(f"{fp_rate}%", "False-positive rate", "bad"),
+        _kpi(summary.get("total", 0), t["findings"]),
+        _kpi(summary.get("confirmed", 0), t["confirmed"], "ok"),
+        _kpi(summary.get("not_confirmed", 0), t["not_confirmed"], "bad"),
+        _kpi(summary.get("inconclusive", 0), t["inconclusive"], "warn"),
+        _kpi(summary.get("reported", 0), t["reported"], "warn"),
+        _kpi(summary.get("blocked", 0), t["blocked"], "neutral"),
+        _kpi(summary.get("reproducible", 0), t["reproducible"]),
+        _kpi(f"{conf_rate}%", t["confirmation_rate"], "ok"),
+        _kpi(f"{fp_rate}%", t["fp_rate"], "bad"),
     ]
-    return '<h2>Summary</h2><div class="kpis">' + "".join(tiles) + "</div>"
+    return f'<h2>{escape(t["summary"])}</h2><div class="kpis">' + "".join(tiles) + "</div>"
 
 
 def _bar(label: str, value: Any, kind: str) -> str:
@@ -177,9 +179,11 @@ def _bar(label: str, value: Any, kind: str) -> str:
     )
 
 
-def _finding_card(r: Dict[str, Any], interactive: bool = False) -> str:
+def _finding_card(r: Dict[str, Any], t: Dict[str, str], interactive: bool = False,
+                  lang: str = "en") -> str:
     verdict = str(r.get("verdict", "INCONCLUSIVE"))
-    cls, icon, label = _VERDICT_META.get(verdict, ("inconclusive", "!", verdict))
+    cls, icon, key = _VERDICT_META.get(verdict, ("inconclusive", "!", ""))
+    label = t.get(key, verdict)
     finding = r.get("finding", {})
     target = r.get("target", {})
     verification = r.get("verification", {})
@@ -199,24 +203,25 @@ def _finding_card(r: Dict[str, Any], interactive: bool = False) -> str:
     parts.append("</div>")
 
     # meta grid
-    repro = "yes" if r.get("reproducible") else "no"
+    repro = t["yes"] if r.get("reproducible") else t["no"]
     proc = verification.get("procedure") or "-"
     status = verification.get("status") or "-"
     parts.append('<div class="meta">')
-    parts.append(f'<div><div class="k">Target</div><div class="v mono">{escape(host)}{escape(path)}</div></div>')
-    parts.append(f'<div><div class="k">Procedure</div><div class="v">{escape(str(proc))} ({escape(str(status))})</div></div>')
-    parts.append(f'<div><div class="k">Reproducible</div><div class="v">{escape(repro)}</div></div>')
-    parts.append(f'<div><div class="k">Probes run</div><div class="v">{escape(str(verification.get("probes_run", 0)))}</div></div>')
+    parts.append(f'<div><div class="k">{escape(t["target"])}</div><div class="v mono">{escape(host)}{escape(path)}</div></div>')
+    parts.append(f'<div><div class="k">{escape(t["procedure"])}</div><div class="v">{escape(str(proc))} ({escape(str(status))})</div></div>')
+    parts.append(f'<div><div class="k">{escape(t["reproducible"])}</div><div class="v">{escape(repro)}</div></div>')
+    parts.append(f'<div><div class="k">{escape(t["probes_run"])}</div><div class="v">{escape(str(verification.get("probes_run", 0)))}</div></div>')
     parts.append("</div>")
 
     # confidence bars: AI hypothesis vs Enigma verification
     parts.append('<div class="bars">')
-    parts.append(_bar("AI confidence", finding.get("ai_confidence", 0), "ai"))
-    parts.append(_bar("Enigma confidence", r.get("confidence", 0), "enigma"))
+    parts.append(_bar(t["ai_confidence"], finding.get("ai_confidence", 0), "ai"))
+    parts.append(_bar(t["enigma_confidence"], r.get("confidence", 0), "enigma"))
     parts.append("</div>")
 
     reason = verification.get("reason") or r.get("reason")
     if reason:
+        reason = translate_reason(str(reason), lang)
         parts.append(f'<div class="reason">{escape(str(reason))}</div>')
 
     # OSSTMM + evidence chips
@@ -229,12 +234,12 @@ def _finding_card(r: Dict[str, Any], interactive: bool = False) -> str:
         for control in methodology.get("controls", []) or []:
             chips.append(f'<span class="chip">{escape(str(control))}</span>')
     if evidence.get("evidence_id"):
-        chips.append(f'<span class="chip">Evidence {escape(str(evidence["evidence_id"]))}</span>')
+        chips.append(f'<span class="chip">{escape(t["evidence"])} {escape(str(evidence["evidence_id"]))}</span>')
     if chips:
         parts.append('<div class="chips">' + "".join(chips) + "</div>")
 
     # plain language + proof receipt
-    parts.append(_proof_block(r, interactive))
+    parts.append(_proof_block(r, t, interactive, lang))
 
     # observations (collapsible, for the technical reader)
     observations = verification.get("observations") or []
@@ -242,30 +247,41 @@ def _finding_card(r: Dict[str, Any], interactive: bool = False) -> str:
         import json as _json
 
         pretty = escape(_json.dumps(observations, indent=2, ensure_ascii=False))
-        parts.append(f"<details><summary>Raw observations ({len(observations)})</summary><pre>{pretty}</pre></details>")
+        parts.append(f"<details><summary>{escape(t['raw_observations'])} ({len(observations)})</summary><pre>{pretty}</pre></details>")
 
     parts.append("</div>")
     return "".join(parts)
 
 
-def _proof_block(r: Dict[str, Any], interactive: bool) -> str:
+def _proof_block(r: Dict[str, Any], t: Dict[str, str], interactive: bool,
+                 lang: str = "en") -> str:
     proof = r.get("proof") or {}
     if not proof:
         return ""
     verdict = str(r.get("verdict", ""))
+    # Stored reports hold the English proof; restate it for this page.
+    proof = localize_proof(
+        proof,
+        (r.get("finding") or {}).get("check"),
+        verdict,
+        (r.get("verification") or {}).get("status", ""),
+        lang,
+    )
     decisive_cls = "ok" if verdict == "CONFIRMED" else ("bad" if verdict == "NOT_CONFIRMED" else "")
 
     parts: List[str] = ['<div class="plain">']
     if proof.get("what"):
-        parts.append(f'<div class="q">What this means</div><div class="a">{escape(str(proof["what"]))}</div>')
+        parts.append(f'<div class="q">{escape(t["what_this_means"])}</div>'
+                     f'<div class="a">{escape(str(proof["what"]))}</div>')
     if proof.get("why"):
-        parts.append(f'<div class="q">Why it matters</div><div class="a">{escape(str(proof["why"]))}</div>')
+        parts.append(f'<div class="q">{escape(t["why_it_matters"])}</div>'
+                     f'<div class="a">{escape(str(proof["why"]))}</div>')
     parts.append("</div>")
 
     exchanges = proof.get("exchanges") or []
     if exchanges or proof.get("decisive"):
         parts.append('<div class="proof">')
-        parts.append("<h4>Proof — what we sent and got back</h4>")
+        parts.append(f"<h4>{escape(t['proof_heading'])}</h4>")
         if proof.get("how"):
             parts.append(f'<div class="a">{escape(str(proof["how"]))}</div>')
         for ex in exchanges[:2]:  # first probe is enough to show the receipt
@@ -277,7 +293,7 @@ def _proof_block(r: Dict[str, Any], interactive: bool) -> str:
                 import json as _json
 
                 shown = escape(_json.dumps(headers, indent=2, ensure_ascii=False))
-                parts.append(f"<details><summary>response headers</summary><pre>{shown}</pre></details>")
+                parts.append(f"<details><summary>{escape(t['response_headers'])}</summary><pre>{shown}</pre></details>")
             body = (ex.get("body_excerpt") or "").strip()
             if body:
                 parts.append(f"<pre>{escape(body[:400])}</pre>")
@@ -286,16 +302,18 @@ def _proof_block(r: Dict[str, Any], interactive: bool) -> str:
             parts.append(f'<div class="decisive {decisive_cls}">{escape(str(proof["decisive"]))}</div>')
         rep = proof.get("reproduced") or {}
         if rep.get("times"):
-            consistent = "same result each time" if rep.get("consistent") else "results varied"
-            parts.append(
-                f'<div class="a">Repeated {escape(str(rep.get("times")))} time(s) — {consistent}.</div>'
-            )
+            line = t["repeated"].format(
+                times=rep.get("times"),
+                consistency=t["consistent"] if rep.get("consistent") else t["varied"])
+        else:
+            line = t["not_probed"]
+        parts.append(f'<div class="a">{escape(line)}</div>')
 
         limits = proof.get("limits") or []
         if limits:
             items = "".join(f"<li>{escape(str(limit))}</li>" for limit in limits)
             parts.append(
-                "<details class=\"limits\"><summary>What this verdict does and does not establish</summary>"
+                f"<details class=\"limits\"><summary>{escape(t['limits_summary'])}</summary>"
                 f"<ul>{items}</ul></details>"
             )
 
@@ -304,7 +322,7 @@ def _proof_block(r: Dict[str, Any], interactive: bool) -> str:
             fid = escape(str(r.get("finding_id", "")))
             parts.append(
                 f'<button class="prove-btn" onclick="enigmaProve(this)" '
-                f'data-aid="{aid}" data-fid="{fid}">▶ Prove it live</button>'
+                f'data-aid="{aid}" data-fid="{fid}">{escape(t["prove_btn"])}</button>'
                 f'<div class="prove-out" id="prove-{fid}"></div>'
             )
         parts.append("</div>")
@@ -320,7 +338,7 @@ _GRADE_CLASS = {
 }
 
 
-def _rav_block(rav: Dict[str, Any]) -> str:
+def _rav_block(rav: Dict[str, Any], t: Dict[str, str]) -> str:
     """Render the OSSTMM RAV panel."""
 
     if not rav:
@@ -332,38 +350,38 @@ def _rav_block(rav: Dict[str, Any]) -> str:
     grade = str(rav.get("grade", ""))
     cls = _GRADE_CLASS.get(grade, "inconclusive")
 
-    parts: List[str] = ['<h2>OSSTMM RAV — Risk Assessment Value</h2>']
+    parts: List[str] = [f'<h2>{escape(t["rav_heading"])}</h2>']
     parts.append(f'<div class="card {cls}">')
     parts.append('<div class="card-head">')
     parts.append(
-        f'<span class="badge {cls}">Actual Security {escape(str(rav.get("actual_security")))}%</span>'
+        f'<span class="badge {cls}">{escape(t["actual_security"])} {escape(str(rav.get("actual_security")))}%</span>'
     )
     parts.append(f'<span class="title">{escape(grade)}</span>')
-    parts.append(f'<span class="fid">deficit {escape(str(rav.get("security_deficit")))}%</span>')
+    parts.append(f'<span class="fid">{escape(t["deficit"])} {escape(str(rav.get("security_deficit")))}%</span>')
     parts.append("</div>")
 
     parts.append('<div class="bars">')
-    parts.append(_bar("True Protection", (rav.get("true_protection") or 0) / 100.0, "enigma"))
-    parts.append(_bar("True Coverage", (rav.get("true_coverage") or 0) / 100.0, "ai"))
+    parts.append(_bar(t["true_protection"], (rav.get("true_protection") or 0) / 100.0, "enigma"))
+    parts.append(_bar(t["true_coverage"], (rav.get("true_coverage") or 0) / 100.0, "ai"))
     parts.append("</div>")
 
     parts.append('<div class="meta">')
     parts.append(
-        f'<div><div class="k">Porosity (OpSec)</div><div class="v">{escape(str(porosity.get("total", 0)))}'
+        f'<div><div class="k">{escape(t["porosity"])}</div><div class="v">{escape(str(porosity.get("total", 0)))}'
         f' <span class="k">(vis {escape(str(porosity.get("visibility", 0)))} · '
         f'acc {escape(str(porosity.get("access", 0)))} · '
         f'trust {escape(str(porosity.get("trust", 0)))})</span></div></div>'
     )
     parts.append(
-        f'<div><div class="k">Controls evidenced</div><div class="v">'
+        f'<div><div class="k">{escape(t["controls_evidenced"])}</div><div class="v">'
         f'{escape(str(controls.get("total", 0)))} / 10</div></div>'
     )
     parts.append(
-        f'<div><div class="k">Limitations (verified)</div><div class="v">'
+        f'<div><div class="k">{escape(t["limitations_verified"])}</div><div class="v">'
         f'{escape(str(limitations.get("total", 0)))}</div></div>'
     )
     parts.append(
-        f'<div><div class="k">Excluded (unverified)</div><div class="v">'
+        f'<div><div class="k">{escape(t["excluded_unverified"])}</div><div class="v">'
         f'{escape(str(rav.get("excluded_unverified", 0)))}</div></div>'
     )
     parts.append("</div>")
@@ -372,22 +390,18 @@ def _rav_block(rav: Dict[str, Any]) -> str:
     for cat, count in sorted((limitations.get("counts") or {}).items()):
         chips.append(f'<span class="chip">{escape(cat)}: {escape(str(count))}</span>')
     for missing in (controls.get("missing") or [])[:5]:
-        chips.append(f'<span class="chip">missing control: {escape(str(missing))}</span>')
+        chips.append(f'<span class="chip">{escape(t["missing_control"])}: {escape(str(missing))}</span>')
     if chips:
         parts.append('<div class="chips">' + "".join(chips) + "</div>")
 
     if basis.get("formula"):
         parts.append(f'<div class="reason mono">{escape(str(basis["formula"]))}</div>')
-    parts.append(
-        '<div class="reason">Computed from <strong>verified observations only</strong>: '
-        "CONFIRMED findings become limitations, NOT_CONFIRMED findings evidence a control, "
-        "and unverified findings are excluded and counted separately.</div>"
-    )
+    parts.append(f'<div class="reason">{t["rav_note"]}</div>')
     parts.append("</div>")
     return "".join(parts)
 
 
-def _modules_block(modules: Dict[str, Any]) -> str:
+def _modules_block(modules: Dict[str, Any], t: Dict[str, str]) -> str:
     """OSSTMM module checklist: which of the 17 modules were exercised, by what."""
 
     if not modules or not modules.get("phases"):
@@ -397,20 +411,21 @@ def _modules_block(modules: Dict[str, Any]) -> str:
     pct = _pct(modules.get("ratio", 0))
     instruments = modules.get("instruments") or []
 
-    parts: List[str] = ["<h2>OSSTMM module coverage</h2>"]
+    parts: List[str] = [f"<h2>{escape(t['modules_heading'])}</h2>"]
     parts.append('<div class="kpis">')
-    parts.append(_kpi(f"{covered}/{total}", "Modules covered", "ok" if pct >= 50 else "warn"))
-    parts.append(_kpi(f"{pct}%", "Methodology coverage"))
+    parts.append(_kpi(f"{covered}/{total}", t["modules_covered"], "ok" if pct >= 50 else "warn"))
+    parts.append(_kpi(f"{pct}%", t["methodology_coverage"]))
     if instruments:
-        parts.append(_kpi(len(instruments), "Instruments"))
+        parts.append(_kpi(len(instruments), t["instruments"]))
     parts.append("</div>")
 
     if instruments:
         chips = "".join(f'<span class="chip">{escape(str(i))}</span>' for i in instruments)
         parts.append(f'<div class="chips">{chips}</div>')
 
-    parts.append('<table class="idx"><thead><tr><th>Phase</th><th>Module</th>'
-                 "<th>Covered</th><th>By</th></tr></thead><tbody>")
+    parts.append(f'<table class="idx"><thead><tr><th>{escape(t["phase"])}</th>'
+                 f'<th>{escape(t["module"])}</th><th>{escape(t["covered"])}</th>'
+                 f'<th>{escape(t["by"])}</th></tr></thead><tbody>')
     for phase in modules["phases"]:
         label = f"{phase['phase']} · {phase['name']}"
         for module in phase["modules"]:
@@ -426,26 +441,25 @@ def _modules_block(modules: Dict[str, Any]) -> str:
     return "".join(parts)
 
 
-def _by_source_block(by_source: Dict[str, Any]) -> str:
+def _by_source_block(by_source: Dict[str, Any], t: Dict[str, str]) -> str:
     """Per-finder outcomes — how much of each source's output survived proof."""
 
     if not by_source:
         return ""
     rows = [
-        "<h2>By source</h2>",
-        '<p class="a">Rates are over <strong>decided</strong> findings '
-        "(confirmed + not confirmed). Findings Enigma could not judge are counted "
-        "as undecided, never held against the finder.</p>",
-        '<table class="idx"><tr><th>Source</th><th>Findings</th><th>Confirmed</th>'
-        "<th>Not confirmed</th><th>Undecided</th><th>Confirmation rate</th>"
-        "<th>Avg. claimed conf.</th></tr>",
+        f"<h2>{escape(t['by_source'])}</h2>",
+        f'<p class="a">{t["by_source_note"]}</p>',
+        f'<table class="idx"><tr><th>{escape(t["source"])}</th>'
+        f'<th>{escape(t["findings"])}</th><th>{escape(t["confirmed"])}</th>'
+        f'<th>{escape(t["not_confirmed"])}</th><th>{escape(t["undecided"])}</th>'
+        f'<th>{escape(t["confirmation_rate"])}</th><th>{escape(t["avg_claimed"])}</th></tr>',
     ]
     ordered = sorted(
         by_source.values(), key=lambda s: (-s.get("total", 0), s.get("source", ""))
     )
     for stats in ordered:
         decided = stats.get("decided", 0)
-        rate = f"{_pct(stats.get('confirmation_rate', 0))}%" if decided else "n/a"
+        rate = f"{_pct(stats.get('confirmation_rate', 0))}%" if decided else t["na"]
         rows.append(
             "<tr>"
             f"<td><code>{escape(str(stats.get('source', '')))}</code></td>"
@@ -461,52 +475,46 @@ def _by_source_block(by_source: Dict[str, Any]) -> str:
     return "".join(rows)
 
 
-def _manifest_block(manifest: Dict[str, Any]) -> str:
+def _manifest_block(manifest: Dict[str, Any], t: Dict[str, str]) -> str:
     """The run's integrity record: what was verified, when, and its hash chain."""
 
     if not manifest:
         return ""
     fields = [
-        ("Generated at (UTC)", manifest.get("generated_at")),
-        ("Enigma version", manifest.get("enigma_version")),
-        ("Python", manifest.get("python_version")),
-        ("Assessment", manifest.get("assessment_id")),
-        ("Target", manifest.get("target")),
-        ("Profile", manifest.get("profile")),
-        ("Instruments", ", ".join(manifest.get("instruments") or []) or None),
+        (t["generated_at"], manifest.get("generated_at")),
+        (t["enigma_version"], manifest.get("enigma_version")),
+        (t["python"], manifest.get("python_version")),
+        (t["assessment"], manifest.get("assessment_id")),
+        (t["target"], manifest.get("target")),
+        (t["profile"], manifest.get("profile")),
+        (t["instruments"], ", ".join(manifest.get("instruments") or []) or None),
         (
-            "Findings recorded",
-            "{} ({} with evidence)".format(
-                manifest.get("total", 0), manifest.get("with_evidence", 0)
+            t["findings_recorded"],
+            "{} ({} {})".format(
+                manifest.get("total", 0), manifest.get("with_evidence", 0), t["with_evidence"]
             ),
         ),
-        ("Digest", manifest.get("digest_algorithm")),
+        (t["digest"], manifest.get("digest_algorithm")),
     ]
-    rows = ["<h2>Run manifest</h2>", '<table class="idx">']
+    rows = [f"<h2>{escape(t['manifest_heading'])}</h2>", '<table class="idx">']
     for label, value in fields:
         rows.append(
             f"<tr><th>{escape(label)}</th><td>{escape(str(value)) if value else '—'}</td></tr>"
         )
     rows.append(
-        '<tr><th>Chain head</th><td><code style="word-break:break-all">'
+        f'<tr><th>{escape(t["chain_head"])}</th><td><code style="word-break:break-all">'
         f'{escape(str(manifest.get("chain_head", "—")))}</code></td></tr>'
     )
     rows.append("</table>")
-    rows.append(
-        '<p class="a">The chain covers the summary, every finding as published on '
-        "this page, and each evidence artifact: alter any of them and the chain head "
-        "no longer matches. Re-check with <code>enigma.evidence.verify_report</code>. "
-        "This shows the report was not altered after the fact — it is not a "
-        "signature.</p>"
-    )
+    rows.append(f'<p class="a">{t["manifest_note"]}</p>')
     return "".join(rows)
 
 
-def _coverage_block(coverage: Dict[str, Any]) -> str:
+def _coverage_block(coverage: Dict[str, Any], t: Dict[str, str]) -> str:
     if not coverage:
         return ""
     total = sum(coverage.values()) or 1
-    rows = ['<h2>OSSTMM coverage</h2>']
+    rows = [f'<h2>{escape(t["coverage_heading"])}</h2>']
     for section, count in sorted(coverage.items(), key=lambda kv: (-kv[1], kv[0])):
         pct = round(count / total * 100)
         rows.append(
@@ -518,12 +526,13 @@ def _coverage_block(coverage: Dict[str, Any]) -> str:
 
 
 # Small runtime for the "Prove it live" button (served dashboard only).
+# The user-visible strings are injected so the button speaks the page's language.
 _PROVE_JS = """
 <script>
 async function enigmaProve(btn){
   const aid = btn.getAttribute('data-aid'), fid = btn.getAttribute('data-fid');
   const out = document.getElementById('prove-' + fid);
-  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Proving…';
+  btn.disabled = true; const label = btn.textContent; btn.textContent = __PROVING__;
   out.textContent = '';
   try {
     const res = await fetch('/prove', {method:'POST', headers:{'Content-Type':'application/json'},
@@ -531,11 +540,11 @@ async function enigmaProve(btn){
     const data = await res.json();
     if (!res.ok || data.error) { out.innerHTML = '<div class="decisive bad">'+(data.error||('HTTP '+res.status))+'</div>'; return; }
     const p = data.proof || {};
-    let html = '<div class="decisive '+(p.proven?'ok':'bad')+'">Live re-check just now: '+ (p.decisive||'') +'</div>';
+    let html = '<div class="decisive '+(p.proven?'ok':'bad')+'">'+__LIVE__+' '+ (p.decisive||'') +'</div>';
     (p.exchanges||[]).slice(0,1).forEach(function(ex){
       html += '<div class="exchange"><div class="req">→ '+ex.request+'</div><div class="st">← HTTP '+ex.response_status+'</div></div>';
     });
-    const rep = p.reproduced||{}; if (rep.times) html += '<div class="a">Repeated '+rep.times+' time(s) just now.</div>';
+    const rep = p.reproduced||{}; if (rep.times) html += '<div class="a">'+__REPEATED__.replace('{times}', rep.times)+'</div>';
     out.innerHTML = html;
   } catch (e) { out.innerHTML = '<div class="decisive bad">'+e+'</div>'; }
   finally { btn.disabled = false; btn.textContent = label; }
@@ -544,12 +553,25 @@ async function enigmaProve(btn){
 """
 
 
+def _prove_js(t: Dict[str, str]) -> str:
+    """The button runtime with this page's wording substituted in."""
+    import json as _json
+
+    return (_PROVE_JS
+            .replace("__PROVING__", _json.dumps(t["proving"]))
+            .replace("__LIVE__", _json.dumps(t["live_recheck"]))
+            .replace("__REPEATED__", _json.dumps(t["repeated_now"])))
+
+
 def render_report_html(
     report: Dict[str, Any],
-    title: str = "Enigma Assessment Report",
+    title: Optional[str] = None,
     subtitle: Optional[str] = None,
     interactive: bool = False,
+    lang: str = "en",
 ) -> str:
+    t = report_labels(lang)
+    title = title or t["report_title"]
     summary = report.get("summary", {})
     results = report.get("results", [])
 
@@ -559,34 +581,31 @@ def render_report_html(
     if subtitle:
         body.append(f'<div class="subtitle">{escape(subtitle)}</div>')
 
-    body.append(_summary_block(summary))
-    body.append(_by_source_block(summary.get("by_source", {})))
-    body.append(_rav_block(summary.get("rav", {})))
+    body.append(_summary_block(summary, t))
+    body.append(_by_source_block(summary.get("by_source", {}), t))
+    body.append(_rav_block(summary.get("rav", {}), t))
 
-    body.append("<h2>Findings</h2>")
+    body.append(f"<h2>{escape(t['findings'])}</h2>")
     if results:
         for r in results:
-            body.append(_finding_card(r, interactive))
+            body.append(_finding_card(r, t, interactive, lang))
     else:
-        body.append('<div class="empty">No findings were assessed.</div>')
+        body.append(f'<div class="empty">{escape(t["no_findings"])}</div>')
 
-    body.append(_coverage_block(summary.get("osstmm_coverage", {})))
-    body.append(_modules_block(summary.get("osstmm_modules", {})))
-    body.append(_manifest_block(report.get("manifest", {})))
+    body.append(_coverage_block(summary.get("osstmm_coverage", {}), t))
+    body.append(_modules_block(summary.get("osstmm_modules", {}), t))
+    body.append(_manifest_block(report.get("manifest", {}), t))
 
-    body.append(
-        "<footer>Generated by <strong>Enigma</strong> — evidence-based verification for "
-        "authorized web vulnerability assessment. Verdicts reflect controlled, non-destructive "
-        "verification; evidence is sanitized.</footer>"
-    )
+    body.append(f"<footer>{t['footer']}</footer>")
     if interactive:
-        body.append(_PROVE_JS)
-    return _doc(title, "".join(body))
+        body.append(_prove_js(t))
+    return _doc(title, "".join(body), lang)
 
 
-def to_html(results: List[Any], summary: Optional[Any] = None, title: str = "Enigma Assessment Report",
+def to_html(results: List[Any], summary: Optional[Any] = None, title: Optional[str] = None,
             subtitle: Optional[str] = None, instruments: Optional[List[str]] = None,
-            assessment: Optional[Any] = None, manifest: Optional[Any] = None) -> str:
+            assessment: Optional[Any] = None, manifest: Optional[Any] = None,
+            lang: str = "en") -> str:
     return render_report_html(
         build_report(
             results,
@@ -597,22 +616,26 @@ def to_html(results: List[Any], summary: Optional[Any] = None, title: str = "Eni
         ),
         title=title,
         subtitle=subtitle,
+        lang=lang,
     )
 
 
-def render_dashboard_html(entries: List[Dict[str, Any]], title: str = "Enigma Dashboard") -> str:
+def render_dashboard_html(entries: List[Dict[str, Any]], title: Optional[str] = None,
+                          lang: str = "en") -> str:
+    t = report_labels(lang)
+    title = title or t["dashboard_title"]
     body: List[str] = []
     body.append('<header class="masthead"><span class="logo"><span class="mark">⬢</span> Enigma</span>')
-    body.append('<span class="subtitle">Assessment dashboard</span></header>')
+    body.append(f'<span class="subtitle">{escape(t["dashboard_sub"])}</span></header>')
 
     if not entries:
-        body.append('<div class="empty">No assessments have been verified yet. '
-                    'POST an assessment to <span class="mono">/verify</span> to get started.</div>')
+        body.append(f'<div class="empty">{t["no_assessments"]}</div>')
     else:
         rows = [
-            "<table class=\"idx\"><thead><tr>"
-            "<th>Assessment</th><th>Confirmed</th><th>Not confirmed</th><th>Inconclusive</th>"
-            "<th>Total</th><th>Report</th></tr></thead><tbody>"
+            '<table class="idx"><thead><tr>'
+            f'<th>{escape(t["assessment"])}</th><th>{escape(t["confirmed"])}</th>'
+            f'<th>{escape(t["not_confirmed"])}</th><th>{escape(t["inconclusive"])}</th>'
+            f'<th>{escape(t["total"])}</th><th>{escape(t["report"])}</th></tr></thead><tbody>' 
         ]
         for entry in entries:
             aid = escape(str(entry.get("assessment_id", "")))
@@ -623,10 +646,12 @@ def render_dashboard_html(entries: List[Dict[str, Any]], title: str = "Enigma Da
                 f"<td>{escape(str(s.get('not_confirmed', 0)))}</td>"
                 f"<td>{escape(str(s.get('inconclusive', 0)))}</td>"
                 f"<td>{escape(str(s.get('total', 0)))}</td>"
-                f"<td><a href=\"/report/{aid}\">View HTML</a> · <a href=\"/results/{aid}\">JSON</a></td></tr>"
+                f'<td><a href="/report/{aid}">{escape(t["view_html"])}</a> · '
+                f'<a href="/results/{aid}">JSON</a></td></tr>' 
             )
         rows.append("</tbody></table>")
         body.append("".join(rows))
 
-    body.append("<footer>Enigma dashboard · served by <span class=\"mono\">enigma serve</span></footer>")
-    return _doc(title, "".join(body))
+    body.append(f'<footer>{escape(t["dashboard_footer"])} '
+                f'<span class="mono">enigma serve</span></footer>')
+    return _doc(title, "".join(body), lang)

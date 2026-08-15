@@ -25,6 +25,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, Optional
+from urllib.parse import parse_qs, urlparse
 
 from ..reporting.html import render_dashboard_html, render_report_html
 from ..service import EnigmaService, ServerScopeError
@@ -102,8 +103,20 @@ def _make_handler(service: EnigmaService, token: Optional[str]):
                 return None
 
         # -- routing ------------------------------------------------- #
+        def _route(self):
+            """Split the request line into (path, ?lang=).
+
+            Only the rendered pages are translated; `lang` never reaches the
+            JSON responses, which stay in one language so stored reports remain
+            comparable.
+            """
+            parsed = urlparse(self.path)
+            lang = (parse_qs(parsed.query).get("lang") or ["en"])[0]
+            return parsed.path, (lang if lang in ("en", "id") else "en")
+
         def do_GET(self) -> None:
-            if self.path == "/health":
+            path, lang = self._route()
+            if path == "/health":
                 self._send(
                     200,
                     {
@@ -117,27 +130,28 @@ def _make_handler(service: EnigmaService, token: Optional[str]):
             if not self._authorized():
                 self._send(401, {"error": "unauthorized"})
                 return
-            if self.path in ("/", "/dashboard"):
+            if path in ("/", "/dashboard"):
                 entries = [
                     {"assessment_id": aid, "summary": (service.get_result(aid) or {}).get("summary", {})}
                     for aid in service.list_results()
                 ]
-                self._send_html(200, render_dashboard_html(entries))
+                self._send_html(200, render_dashboard_html(entries, lang=lang))
                 return
-            if self.path.startswith("/report/"):
-                assessment_id = self.path[len("/report/"):]
+            if path.startswith("/report/"):
+                assessment_id = path[len("/report/"):]
                 report = service.get_result(assessment_id)
                 if report is None:
-                    self._send_html(404, render_dashboard_html([]))
+                    self._send_html(404, render_dashboard_html([], lang=lang))
                 else:
                     # served report is interactive: each finding gets a live "Prove it" button
                     self._send_html(
                         200,
-                        render_report_html(report, subtitle=f"Assessment {assessment_id}", interactive=True),
+                        render_report_html(report, subtitle=f"Assessment {assessment_id}",
+                                           interactive=True, lang=lang),
                     )
                 return
-            if self.path.startswith("/results/"):
-                assessment_id = self.path[len("/results/"):]
+            if path.startswith("/results/"):
+                assessment_id = path[len("/results/"):]
                 report = service.get_result(assessment_id)
                 if report is None:
                     self._send(404, {"error": f"no result for {assessment_id!r}"})
