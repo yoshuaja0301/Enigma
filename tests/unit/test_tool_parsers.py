@@ -131,6 +131,27 @@ class NucleiParserTests(unittest.TestCase):
     def test_empty_input(self):
         self.assertEqual(parse_nuclei(""), [])
 
+    def test_open_redirect_template_infers_check_and_param(self):
+        line = json.dumps({
+            "template-id": "open-redirect",
+            "info": {"name": "Open Redirect", "severity": "medium", "tags": ["redirect"]},
+            "matched-at": "https://target.example/go?url=https://x.example",
+        })
+        findings = parse_nuclei(line)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["check"], "open_redirect")
+        self.assertEqual(findings[0]["parameters"]["param"], "url")
+
+    def test_open_redirect_without_param_is_recorded_not_probed(self):
+        line = json.dumps({
+            "template-id": "open-redirect",
+            "info": {"name": "Open Redirect", "severity": "medium"},
+            "matched-at": "https://target.example/go",
+        })
+        findings = parse_nuclei(line)
+        self.assertEqual(len(findings), 1)
+        self.assertNotIn("check", findings[0])
+
 
 class ZapParserTests(unittest.TestCase):
     def setUp(self):
@@ -180,6 +201,25 @@ class ZapParserTests(unittest.TestCase):
         findings = parse_zap(report)
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0]["check"], "clickjacking")
+
+    def test_external_redirect_infers_open_redirect_with_param(self):
+        report = json.dumps({"site": {"@host": "h.example", "alerts": [
+            {"pluginid": "10028", "alert": "External Redirect", "confidence": "2",
+             "instances": [{"uri": "https://h.example/go?next=/home", "param": "next"}]}
+        ]}})
+        findings = parse_zap(report)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["check"], "open_redirect")
+        self.assertEqual(findings[0]["parameters"]["param"], "next")
+
+    def test_external_redirect_without_param_is_recorded_not_probed(self):
+        report = json.dumps({"site": {"@host": "h.example", "alerts": [
+            {"pluginid": "10028", "alert": "External Redirect", "confidence": "2",
+             "instances": [{"uri": "https://h.example/go"}]}
+        ]}})
+        findings = parse_zap(report)
+        self.assertEqual(len(findings), 1)
+        self.assertNotIn("check", findings[0])
 
     def test_invalid_json_raises(self):
         with self.assertRaises(ValueError):

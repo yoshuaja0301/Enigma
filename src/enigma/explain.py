@@ -96,6 +96,14 @@ CHECK_INFO: Dict[str, Dict[str, Dict[str, str]]] = {
                "what": "Header respons membocorkan versi server/teknologi yang tepat.",
                "why": "Ini memberi tahu penyerang eksploit lama mana yang layak dicoba."},
     },
+    "open_redirect": {
+        "en": {"label": "Open redirect",
+               "what": "A URL parameter sent the browser on to an outside website we chose.",
+               "why": "Attackers abuse it to make a trusted link land on a phishing page."},
+        "id": {"label": "Open redirect",
+               "what": "Sebuah parameter URL mengarahkan browser ke situs luar pilihan kami.",
+               "why": "Penyerang menyalahgunakannya agar tautan tepercaya berujung di halaman phishing."},
+    },
 }
 
 _UNKNOWN = {
@@ -165,6 +173,10 @@ def _decisive_key(check: Optional[str], obs: Dict[str, Any]) -> Tuple[str, Dict[
             joined = "; ".join(f"{k}: {v}" for k, v in disclosures.items())
             return "server_version.disclosed", {"disclosures": joined}
         return "server_version.none", {}
+    if check == "open_redirect":
+        if obs.get("redirects_offsite"):
+            return "open_redirect.yes", {"location": str(obs.get("location"))}
+        return "open_redirect.no", {}
     return "fallback", {}
 
 
@@ -231,6 +243,12 @@ _DECISIVE = {
     "server_version.none": {
         "en": "No server/version banner was disclosed.",
         "id": "Tidak ada banner server/versi yang disingkapkan."},
+    "open_redirect.yes": {
+        "en": "The server redirected to the external address we supplied ({location}).",
+        "id": "Server mengalihkan ke alamat eksternal yang kami berikan ({location})."},
+    "open_redirect.no": {
+        "en": "The redirect parameter did not send us to an external site.",
+        "id": "Parameter pengalihan tidak mengarahkan kami ke situs eksternal."},
     "fallback": {
         "en": "See the observations for details.",
         "id": "Lihat bagian observasi untuk detailnya."},

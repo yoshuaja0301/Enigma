@@ -31,7 +31,7 @@ Per OSSTMM 3, Chapter 3 (*Operational Security Metrics*):
 | Category | Weight | Meaning | Example check |
 |---|---|---|---|
 | Vulnerability | 5.0 | flaw granting access or trust | `cors`, `http_method` |
-| Weakness | 4.0 | a control that fails | `security_header`, `cookie_flags`, `tls_redirect`, `clickjacking` |
+| Weakness | 4.0 | a control that fails | `security_header`, `cookie_flags`, `tls_redirect`, `clickjacking`, `open_redirect` |
 | Concern | 3.0 | insufficient assurance/logging | `reflection` |
 | Exposure | 2.0 | information disclosure | `directory_listing`, `server_version` |
 | Anomaly | 1.0 | unidentifiable behaviour | *(fallback)* |

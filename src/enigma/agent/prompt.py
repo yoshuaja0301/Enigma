@@ -36,6 +36,7 @@ _CHECK_PARAMS = {
     "clickjacking": {},
     "directory_listing": {},
     "server_version": {},
+    "open_redirect": {"param": "the redirect/return-URL parameter to test, e.g. next, url, redirect, returnUrl"},
 }
 
 

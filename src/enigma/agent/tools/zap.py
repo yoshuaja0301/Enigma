@@ -43,6 +43,7 @@ _PLUGIN_CHECKS: Dict[str, Tuple[str, Optional[Dict[str, Any]]]] = {
     "10036": ("server_version", {}),
     "10037": ("server_version", {}),
     "10098": ("cors", {}),
+    "10028": ("open_redirect", None),
 }
 
 # Fallback: substrings of the alert name.
@@ -59,6 +60,8 @@ _NAME_CHECKS = (
     ("header not set", "security_header"),
     ("header missing", "security_header"),
     ("reflected", "reflection"),
+    ("external redirect", "open_redirect"),
+    ("open redirect", "open_redirect"),
 )
 
 
@@ -136,7 +139,9 @@ def parse_zap(source: Any) -> List[Dict[str, Any]]:
                 host, _ = split_url(uri)
 
                 params = dict(parameters)
-                if check == "reflection" and not params:
+                # reflection and open_redirect both need the parameter to test;
+                # without one the finding is recorded rather than under-probed.
+                if check in ("reflection", "open_redirect") and not params:
                     param = instance.get("param") or query_param(uri)
                     if param:
                         params["param"] = str(param)

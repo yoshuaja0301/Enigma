@@ -30,6 +30,7 @@ KNOWN_CHECKS = frozenset(
         "clickjacking",
         "directory_listing",
         "server_version",
+        "open_redirect",
     }
 )
 
@@ -60,6 +61,11 @@ _CATEGORY_CHECK_HINTS = {
     "version_disclosure": "server_version",
     "information_disclosure": "server_version",
     "banner_grabbing": "server_version",
+    "open_redirect": "open_redirect",
+    "open-redirect": "open_redirect",
+    "unvalidated_redirect": "open_redirect",
+    "url_redirection": "open_redirect",
+    "redirect": "open_redirect",
 }
 
 

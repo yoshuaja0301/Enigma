@@ -205,7 +205,7 @@ enigma verify --assessment a.json \
   --nmap scan.xml --whatweb whatweb.json
 ```
 
-Findings matching one of the nine checks are verified automatically; the rest
+Findings matching one of the ten checks are verified automatically; the rest
 stay `reported`. The tool's own severity becomes the finding's `confidence` — the
 hypothesis slot verification never reads — so a *High confidence* ZAP alert can
 still come back `NOT_CONFIRMED` when the server disagrees, and a Nuclei *info*
@@ -301,6 +301,7 @@ table, an HTML panel). See [`docs/rav.md`](docs/rav.md).
 | `clickjacking` | Whether the page is frameable (no `X-Frame-Options`, no CSP `frame-ancestors`). |
 | `directory_listing` | Whether a server-generated directory index is exposed. |
 | `server_version` | Whether server/technology versions are disclosed (`Server`, `X-Powered-By`, …). |
+| `open_redirect` | Whether a named redirect parameter forwards to an external site (`Location` observed, never followed). |
 
 Discovery is **unrestricted** — OpenClaw may report any vulnerability type. A
 finding that matches one of these checks is verified automatically; anything
@@ -351,7 +352,7 @@ core still works:
 **Supporting:**
 
 ```
-tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 303 tests
+tests/            unit + integration (local HTTP server, REST API, MCP e2e) — 314 tests
   fixtures/       raw OpenClaw payloads used by the normalizer tests
 examples/         assessment / findings / verification-result JSON
   live-demo/      five finders vs one live target, manifest + prove-it-live (start here)
@@ -365,7 +366,7 @@ docs/             architecture, authorization, assessment-model, verification, .
 ## Tests
 
 ```bash
-python3 -m pytest          # 303 tests, no external network required
+python3 -m pytest          # 314 tests, no external network required
 ```
 
 CI (GitHub Actions) runs the full suite on Python 3.9–3.13 on every push and

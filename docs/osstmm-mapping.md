@@ -34,6 +34,7 @@ Web assessment lives in the **COMSEC / Data Networks** channel.
 | `clickjacking` | Integrity | Integrity, Subjugation |
 | `directory_listing` | Information Leakage | Confidentiality |
 | `server_version` | Information Leakage | Confidentiality |
+| `open_redirect` | Integrity | Integrity, Subjugation |
 | *(default / unknown)* | Information Leakage | Confidentiality |
 
 ## RAV (Risk Assessment Value)

@@ -1,4 +1,4 @@
-"""Unit tests for the cookie_flags, cors and tls_redirect procedures."""
+"""Unit tests for the cookie_flags, cors, tls_redirect and open_redirect procedures."""
 
 import unittest
 
@@ -115,6 +115,57 @@ class TlsRedirectTests(unittest.TestCase):
             status=302, headers={"Location": "http://authorized-target.example/login"}))
         r = verify(t, Finding(finding_id="T3", check="tls_redirect", target_path="/x"))
         self.assertEqual(r.verdict, Verdict.CONFIRMED)
+
+
+class OpenRedirectTests(unittest.TestCase):
+    _PROBE = "https://enigma-redirect-probe.example/enigma"
+
+    def _finding(self, fid="OR1"):
+        return Finding(finding_id=fid, check="open_redirect", target_path="/go",
+                       parameters={"param": "next"})
+
+    def test_offsite_redirect_is_confirmed(self):
+        t = FakeTransport(default=HttpResponse(status=302, headers={"Location": self._PROBE}))
+        r = verify(t, self._finding())
+        self.assertEqual(r.verdict, Verdict.CONFIRMED)
+        self.assertTrue(r.observations[0]["redirects_offsite"])
+        # the probe URL must have been carried in the named parameter
+        self.assertTrue(any("next=" in url for _, url, _ in t.exchanges))
+
+    def test_scheme_relative_offsite_is_confirmed(self):
+        t = FakeTransport(default=HttpResponse(
+            status=301, headers={"Location": "//enigma-redirect-probe.example/enigma"}))
+        r = verify(t, self._finding("OR2"))
+        self.assertEqual(r.verdict, Verdict.CONFIRMED)
+
+    def test_same_origin_redirect_is_not_confirmed(self):
+        t = FakeTransport(default=HttpResponse(
+            status=302, headers={"Location": "https://authorized-target.example/dashboard"}))
+        r = verify(t, self._finding("OR3"))
+        self.assertEqual(r.verdict, Verdict.NOT_CONFIRMED)
+        self.assertFalse(r.observations[0]["redirects_offsite"])
+
+    def test_relative_path_redirect_is_not_confirmed(self):
+        t = FakeTransport(default=HttpResponse(status=302, headers={"Location": "/dashboard"}))
+        r = verify(t, self._finding("OR4"))
+        self.assertEqual(r.verdict, Verdict.NOT_CONFIRMED)
+
+    def test_no_redirect_status_is_not_confirmed(self):
+        t = FakeTransport(default=HttpResponse(status=200, headers={"Location": self._PROBE}))
+        r = verify(t, self._finding("OR5"))
+        self.assertEqual(r.verdict, Verdict.NOT_CONFIRMED)
+
+    def test_lookalike_host_is_not_confirmed(self):
+        # A host that merely contains the probe label must not be treated as ours.
+        t = FakeTransport(default=HttpResponse(
+            status=302, headers={"Location": "https://enigma-redirect-probe.example.evil.test/x"}))
+        r = verify(t, self._finding("OR6"))
+        self.assertEqual(r.verdict, Verdict.NOT_CONFIRMED)
+
+    def test_without_param_is_inconclusive(self):
+        t = FakeTransport(default=HttpResponse(status=302, headers={"Location": self._PROBE}))
+        r = verify(t, Finding(finding_id="OR7", check="open_redirect", target_path="/go"))
+        self.assertEqual(r.verdict, Verdict.INCONCLUSIVE)
 
 
 if __name__ == "__main__":

@@ -480,6 +480,64 @@ class ServerVersionProcedure:
         )
 
 
+class OpenRedirectProcedure:
+    """Observe whether a redirect parameter forwards to an attacker-chosen site.
+
+    Non-destructive: a single GET carrying a benign probe URL in the named
+    parameter. The redirect is *observed* — the ``Location`` header is read,
+    never followed. Hypothesis (weakness) = the response redirects (3xx) to the
+    external host we supplied, i.e. the app trusts a user-controlled URL for
+    navigation. A same-origin or path-relative ``Location`` is not a finding.
+    """
+
+    key = "open_redirect"
+    _PROBE_HOST = "enigma-redirect-probe.example"
+    _PROBE_URL = "https://enigma-redirect-probe.example/enigma"
+
+    def applies_to(self, finding: Finding) -> bool:
+        # Only runs when the finding names the redirect parameter to test; an
+        # under-specified finding is recorded, not probed against a guessed slot.
+        return bool(finding.parameters.get("param"))
+
+    def probe(self, ctx: ProbeContext, finding: Finding) -> ProbeOutcome:
+        param = str(finding.parameters["param"])
+        resp = ctx.send("GET", query={param: self._PROBE_URL})
+        if resp.status == 0:
+            return ProbeOutcome(
+                False,
+                {"check": "open_redirect", "param": param},
+                error=resp.error or "request failed",
+            )
+        location = resp.header("Location") or ""
+        is_redirect = 300 <= resp.status < 400
+        offsite = is_redirect and self._targets_probe(location)
+        return ProbeOutcome(
+            condition_met=offsite,
+            observation={
+                "check": "open_redirect",
+                "param": param,
+                "status": resp.status,
+                "location": location or None,
+                "redirects_offsite": offsite,
+            },
+        )
+
+    @classmethod
+    def _targets_probe(cls, location: str) -> bool:
+        loc = location.strip()
+        if not loc:
+            return False
+        low = loc.lower()
+        # Absolute URL pointing at the probe host.
+        if low.startswith("http://") or low.startswith("https://"):
+            return (urlsplit(loc).hostname or "").lower() == cls._PROBE_HOST
+        # Scheme-relative //host/... still lands off-site at the probe host.
+        if loc.startswith("//"):
+            return (urlsplit("http:" + loc).hostname or "").lower() == cls._PROBE_HOST
+        # Any other Location (a path-relative redirect) stays on the origin — safe.
+        return False
+
+
 _DEFAULT_PROCEDURES = {
     SecurityHeaderProcedure.key: SecurityHeaderProcedure(),
     ReflectionProcedure.key: ReflectionProcedure(),
@@ -490,6 +548,7 @@ _DEFAULT_PROCEDURES = {
     ClickjackingProcedure.key: ClickjackingProcedure(),
     DirectoryListingProcedure.key: DirectoryListingProcedure(),
     ServerVersionProcedure.key: ServerVersionProcedure(),
+    OpenRedirectProcedure.key: OpenRedirectProcedure(),
 }
 
 
