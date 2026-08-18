@@ -29,6 +29,7 @@ using controlled, non-destructive probes, then issues a verdict.
 | `clickjacking` | GET | page is frameable (no `X-Frame-Options`, no CSP `frame-ancestors`) | — |
 | `directory_listing` | GET | a server-generated directory index is exposed | — |
 | `server_version` | GET | server/technology version disclosed in headers | — |
+| `open_redirect` | GET | a named redirect parameter forwards to an external site (`Location` observed, never followed) | `param` |
 
 All procedures are strictly observational, non-destructive, and read-oriented:
 

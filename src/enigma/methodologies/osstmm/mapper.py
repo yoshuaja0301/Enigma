@@ -25,6 +25,7 @@ _CHECK_MAP = {
     "clickjacking": (Section.INTEGRITY, [Control.INTEGRITY, Control.SUBJUGATION]),
     "directory_listing": (Section.INFORMATION, [Control.CONFIDENTIALITY]),
     "server_version": (Section.INFORMATION, [Control.CONFIDENTIALITY]),
+    "open_redirect": (Section.INTEGRITY, [Control.INTEGRITY, Control.SUBJUGATION]),
 }
 
 _DEFAULT_MAP = (Section.INFORMATION, [Control.CONFIDENTIALITY])

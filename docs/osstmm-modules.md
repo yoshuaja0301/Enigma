@@ -40,6 +40,7 @@ Enigma's own verification checks contribute coverage too:
 | `clickjacking` | 7 Controls Verification |
 | `directory_listing` | 11 Segregation Review, 12 Exposure Verification |
 | `server_version` | 9 Configuration Verification, 12 Exposure Verification |
+| `open_redirect` | 6 Trust Verification, 7 Controls Verification |
 
 **Why Enigma covers module 1.** The Posture Review is the definition of scope,
 rules and permitted actions before testing begins — which is exactly what

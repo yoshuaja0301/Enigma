@@ -194,6 +194,7 @@ CHECK_MODULE_MAP: Dict[str, Tuple[int, ...]] = {
     "clickjacking": (7,),           # controls verification
     "directory_listing": (11, 12),  # segregation review + exposure verification
     "server_version": (9, 12),      # configuration + exposure verification
+    "open_redirect": (6, 7),        # trust verification + controls verification
 }
 
 

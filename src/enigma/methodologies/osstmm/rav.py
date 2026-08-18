@@ -83,6 +83,7 @@ CHECK_LIMITATION_MAP: Dict[str, str] = {
     "cookie_flags": "weakness",
     "tls_redirect": "weakness",
     "clickjacking": "weakness",
+    "open_redirect": "weakness",
     # Access/trust granting flaws -> Vulnerability
     "cors": "vulnerability",
     "http_method": "vulnerability",
@@ -103,6 +104,7 @@ CHECK_CONTROL_MAP: Dict[str, Control] = {
     "directory_listing": Control.PRIVACY,
     "server_version": Control.PRIVACY,
     "reflection": Control.INTEGRITY,
+    "open_redirect": Control.SUBJUGATION,
 }
 
 _DEFAULT_LIMITATION = "anomaly"

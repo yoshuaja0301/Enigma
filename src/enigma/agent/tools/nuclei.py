@@ -52,6 +52,8 @@ _TEMPLATE_CHECKS = (
     ("version-disclosure", "server_version"),
     ("tech-detect", "server_version"),
     ("server-header", "server_version"),
+    ("open-redirect", "open_redirect"),
+    ("open_redirect", "open_redirect"),
 )
 
 
@@ -98,7 +100,7 @@ def _parameters(check: Optional[str], result: Dict[str, Any], signals: str) -> D
     if check == "cookie_flags":
         flag = find_cookie_flag(signals)
         return {"flag": flag} if flag else {}
-    if check == "reflection":
+    if check in ("reflection", "open_redirect"):
         param = query_param(result.get("matched-at") or result.get("matched"))
         return {"param": param} if param else {}
     return {}
@@ -140,7 +142,7 @@ def parse_nuclei(source: Any) -> List[Dict[str, Any]]:
         parameters = _parameters(check, result, signals)
         # A check whose required parameter could not be determined cannot be
         # verified — record it rather than run an under-specified probe.
-        if check in ("security_header", "cookie_flags") and not parameters:
+        if check in ("security_header", "cookie_flags", "open_redirect") and not parameters:
             check = None
 
         severity = _severity(result)

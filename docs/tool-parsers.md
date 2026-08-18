@@ -32,7 +32,7 @@ PARSERS["nuclei"]("nuclei.jsonl")                # dispatch by tool name
 | Nmap XML (`nmap -oX`) | one finding per open port, plus service-banner and NSE-script findings |
 | WhatWeb JSON (`--log-json`, JSONL or array) | one finding per **security-relevant** plugin |
 
-A finding that maps onto one of Enigma's nine safe checks carries `check` +
+A finding that maps onto one of Enigma's ten safe checks carries `check` +
 `parameters` and is **verified automatically**. Anything else keeps status
 `reported` — never dropped, never probed unsafely.
 
@@ -50,11 +50,13 @@ A finding that maps onto one of Enigma's nine safe checks carries `check` +
 | 10033 | Directory Browsing | `directory_listing` |
 | 10036 / 10037 | Server leaks version information | `server_version` |
 | 10098 | Cross-Domain Misconfiguration | `cors` |
+| 10028 | External Redirect | `open_redirect` (uses the reported `param`) |
 | 40012 | Reflected XSS | `reflection` (uses the reported `param`) |
 
 **Nuclei** is matched on template id, tags, name and `matcher-name` — e.g.
 `http-missing-security-headers` + `matcher-name: content-security-policy` →
-`security_header`; `dir-listing` → `directory_listing`; `cors*` → `cors`.
+`security_header`; `dir-listing` → `directory_listing`; `cors*` → `cors`;
+`open-redirect` → `open_redirect` (param taken from the matched URL).
 
 **Nmap** works at the port/service layer while Enigma verifies at the HTTP layer,
 so the mapping is deliberately narrow — only what Enigma can actually prove:
