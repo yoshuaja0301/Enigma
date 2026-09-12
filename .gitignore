@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Strix pentest run reports (may contain exploits/credentials/PII)
+strix_runs/
