@@ -1,0 +1,303 @@
+{
+  "methodology": "OSSTMM 3",
+  "source": "Open Source Security Testing Methodology Manual 3, ISECOM (https://www.isecom.org)",
+  "phases": [
+    {
+      "id": "I",
+      "name": "Induction",
+      "intent": "Establish the truth of the environment: what rules apply, what interference distorts measurement, and whether the target detects interaction at all."
+    },
+    {
+      "id": "II",
+      "name": "Interaction",
+      "intent": "Measure the attack surface: visibility, access, trust, and the process controls protecting them."
+    },
+    {
+      "id": "III",
+      "name": "Inquest",
+      "intent": "Measure what the target emanates: processes, configuration, property, segregation, exposure and competitive intelligence."
+    },
+    {
+      "id": "IV",
+      "name": "Intervention",
+      "intent": "Measure what happens under interference: containment, privilege misuse, continuity, and what the target actually recorded."
+    }
+  ],
+  "channels": [
+    {
+      "id": "human-security",
+      "code": "HUMSEC",
+      "name": "Human Security",
+      "scope": "People, their interactions, and the psychological and physical means of reaching them.",
+      "index": "Names, roles, contact points (each person reachable through a channel is a target)."
+    },
+    {
+      "id": "physical-security",
+      "code": "PHYSSEC",
+      "name": "Physical Security",
+      "scope": "Tangible, non-electronic barriers and controls: sites, doors, locks, guards, racks, media, waste.",
+      "index": "Locations, entry points, enclosures, storage."
+    },
+    {
+      "id": "wireless-communications",
+      "code": "SPECSEC",
+      "name": "Wireless Communications",
+      "scope": "All electronic emanation within the scope: 802.11, Bluetooth, RFID/NFC, infrared, cellular, radio, and unintended emissions.",
+      "index": "BSSIDs/SSIDs, device MACs, tag IDs, frequencies, emitters."
+    },
+    {
+      "id": "telecommunications",
+      "code": "TELSEC",
+      "name": "Telecommunications",
+      "scope": "Voice and telephony networks: PSTN lines, PBX, VoIP, voicemail, fax, conferencing, modems.",
+      "index": "Numbers, extensions, SIP URIs, trunks, mailboxes."
+    },
+    {
+      "id": "data-networks",
+      "code": "COMSEC",
+      "name": "Data Networks",
+      "scope": "Wired and routed networks, systems, services and applications reachable over them.",
+      "index": "IP addresses, hostnames, URLs/endpoints, ports and services, accounts."
+    }
+  ],
+  "modules": [
+    {
+      "id": "A",
+      "phase": "I",
+      "name": "Posture Review",
+      "purpose": "Establish the culture, rules, regulations, legislation, contracts and policies that govern the scope, and the ones the audit itself must obey.",
+      "done_when": "Applicable obligations are listed with their source, and any that conflict with the planned tests are resolved or excluded in writing.",
+      "channel_notes": {
+        "human-security": "HR policy, acceptable-use and awareness obligations; local law on recording, pretexting and employee privacy.",
+        "physical-security": "Site rules, fire/safety codes, lease and landlord limits, camera and badge-data retention law.",
+        "wireless-communications": "Spectrum regulation, transmit-power limits, legality of capture and jamming in the jurisdiction.",
+        "telecommunications": "Wiretap and recording law, carrier terms, emergency-service (911/112) prohibitions on test calls.",
+        "data-networks": "Provider and cloud test policies, data-protection duties over anything captured, third-party hosting consent."
+      }
+    },
+    {
+      "id": "B",
+      "phase": "I",
+      "name": "Logistics",
+      "purpose": "Measure the interference between analyst and target — latency, distance, filtering, geography, language, time of day — so later measurements are not artifacts of the path.",
+      "done_when": "Vantage points, baseline timings and known distortions are recorded, and the index is reachable from the agreed position.",
+      "channel_notes": {
+        "human-security": "Language, time zones, working hours, cultural norms that change how a person responds.",
+        "physical-security": "Travel, sightlines, weather, lighting, shift patterns of the site.",
+        "wireless-communications": "Distance, antenna and gain, noise floor, obstructions, channel congestion.",
+        "telecommunications": "Trunk quality, carrier routing, IVR timeouts, call-detail delays.",
+        "data-networks": "Route and latency baselines, upstream filtering, CDN/WAF interposition, rate limits, NAT and geo-blocking."
+      }
+    },
+    {
+      "id": "C",
+      "phase": "I",
+      "name": "Active Detection Verification",
+      "purpose": "Verify the breadth and predictability of the target's detection, logging and response before you rely on stealth or on the target's own records.",
+      "done_when": "It is known what interaction is detected, how fast, by whom, and whether response is consistent enough to be predicted.",
+      "channel_notes": {
+        "human-security": "Whether staff report approaches, to whom, and how quickly the report travels.",
+        "physical-security": "Guard rounds, camera coverage and review, alarm zones and response time.",
+        "wireless-communications": "Rogue-AP and WIDS detection, deauth alerting, client-side warnings.",
+        "telecommunications": "Fraud/toll alerting, call-pattern monitoring, voicemail lockout thresholds.",
+        "data-networks": "IDS/WAF/EDR reaction, blocking thresholds, ticket generation, whether blocks are per-IP, per-session or permanent."
+      }
+    },
+    {
+      "id": "D",
+      "phase": "II",
+      "name": "Visibility Audit",
+      "purpose": "Enumerate what of the scope can be seen from the agreed vantage point. Each visible target is a Visibility pore.",
+      "done_when": "The index is complete and de-duplicated, every entry traceable to how it was discovered, and Visibility is a defensible count.",
+      "channel_notes": {
+        "human-security": "People discoverable as reachable targets: directories, org charts, social profiles, conference and vendor lists.",
+        "physical-security": "Visible entrances, windows, enclosures, equipment and signage identifying assets.",
+        "wireless-communications": "Beaconing and non-beaconing networks, paired devices, tags and emitters detectable in scope.",
+        "telecommunications": "Live numbers in the block, extensions, mailboxes, fax and modem answers.",
+        "data-networks": "Live hosts, open ports, services and versions, virtual hosts, endpoints and APIs, cloud assets."
+      }
+    },
+    {
+      "id": "E",
+      "phase": "II",
+      "name": "Access Verification",
+      "purpose": "Measure the breadth and depth of interactive access points — every place interaction is possible, authenticated or not. Each is an Access pore.",
+      "done_when": "Every access point is enumerated with the interaction it permits, and Access is counted per point rather than per system.",
+      "channel_notes": {
+        "human-security": "Each channel a person actually answers on: phone, mail, chat, in-person, plus who they will accept requests from.",
+        "physical-security": "Doors, gates, windows, hatches, ports and drop points that admit interaction.",
+        "wireless-communications": "Associable networks, open pairing, readable/writable tags, receivers that accept input.",
+        "telecommunications": "Answering endpoints, IVR branches, DISA, voicemail systems, conference bridges.",
+        "data-networks": "Each service, endpoint, parameter surface, login, upload and admin interface that accepts input."
+      }
+    },
+    {
+      "id": "F",
+      "phase": "II",
+      "name": "Trust Verification",
+      "purpose": "Determine where targets accept interaction from each other without authentication. Each such relationship is a Trust pore.",
+      "done_when": "Trust relationships are mapped between indexed targets and assessed against the trust properties (see references/engagement.md).",
+      "channel_notes": {
+        "human-security": "Who is believed without verification: internal callers, vendors, badge-wearers, authority claims.",
+        "physical-security": "Areas entered without re-authentication once inside, shared keys, tailgating tolerance.",
+        "wireless-communications": "Auto-join profiles, remembered SSIDs, trusted pairings, unauthenticated management frames.",
+        "telecommunications": "Caller-ID trust, internal-extension privilege, voicemail access from inside the PBX.",
+        "data-networks": "Allow-listed IPs, host trust, service accounts, SSO/token trust, internal APIs assumed private."
+      }
+    },
+    {
+      "id": "G",
+      "phase": "II",
+      "name": "Controls Verification",
+      "purpose": "Measure the use and effectiveness of the five process (Class B) controls: non-repudiation, confidentiality, privacy, integrity, alarm.",
+      "done_when": "Each process control is counted only where verified working against a specific pore, and flaws in them are recorded as Concerns.",
+      "channel_notes": {
+        "human-security": "Identity recording, discretion in handling requests, confidential channels, verification steps, reporting duty.",
+        "physical-security": "Badge and visitor records, shielding from observation, tamper seals, alarms.",
+        "wireless-communications": "Link encryption, MAC/identifier privacy, frame integrity, rogue alarming.",
+        "telecommunications": "Call logging and CDR retention, encrypted voice, number privacy, fraud alarms.",
+        "data-networks": "Audit logging, transport and at-rest encryption, PII minimization, signing/hashing, alerting on abuse."
+      }
+    },
+    {
+      "id": "H",
+      "phase": "III",
+      "name": "Process Verification",
+      "purpose": "Test whether the controls found are maintained as documented — due diligence under normal and abnormal conditions, not just on the day of the audit.",
+      "done_when": "Each claimed process has been exercised or evidenced, and drift between documented and operational state is recorded.",
+      "channel_notes": {
+        "human-security": "Whether verification, escalation and reporting procedures are followed when inconvenient.",
+        "physical-security": "Whether visitor, key-issue and disposal procedures hold during shift change and after hours.",
+        "wireless-communications": "Whether rogue findings are acted on and provisioning follows the standard.",
+        "telecommunications": "Whether extension, mailbox and trunk changes follow change control.",
+        "data-networks": "Patch, onboarding/offboarding, backup-restore, certificate renewal and incident procedures under load."
+      }
+    },
+    {
+      "id": "I",
+      "phase": "III",
+      "name": "Configuration / Training Verification",
+      "purpose": "Compare the operational state to the intended state: configuration for technical channels, training and awareness for the human channel. Establishes whether controls override operational need or the reverse.",
+      "done_when": "Defaults, deviations and unmanaged assets are documented against the intended baseline.",
+      "channel_notes": {
+        "human-security": "Training content, recency and coverage; what staff actually do versus what training says.",
+        "physical-security": "Lock grades, door closers, camera aim, safe settings, fire-path overrides.",
+        "wireless-communications": "Cipher suites, WPS/legacy protocols, transmit power, guest isolation, default credentials.",
+        "telecommunications": "Default and unchanged mailbox PINs, call-forward and DISA settings, unused trunks.",
+        "data-networks": "Hardening baselines, default credentials and pages, TLS configuration, permissive CORS/headers, exposed debug."
+      }
+    },
+    {
+      "id": "J",
+      "phase": "III",
+      "name": "Property Validation",
+      "purpose": "Identify intellectual and physical property within the scope that is breached, misused, unlicensed or illegally held.",
+      "done_when": "Property held in scope is inventoried against entitlement, and misuse is recorded with evidence rather than assumption.",
+      "channel_notes": {
+        "human-security": "Company data on personal accounts and devices, shared credentials, unsanctioned tools.",
+        "physical-security": "Unlicensed media, unaccounted equipment, documents and disposal-bound material left recoverable.",
+        "wireless-communications": "Unauthorized APs and hotspots, rogue tags and devices carrying company data.",
+        "telecommunications": "Unauthorized lines, forwarding of business calls to private numbers, unsanctioned conferencing.",
+        "data-networks": "Unlicensed software, leaked source or keys, shadow-IT services and data holding company property."
+      }
+    },
+    {
+      "id": "K",
+      "phase": "III",
+      "name": "Segregation Review",
+      "purpose": "Determine the separation between personal information and business information, and the exposure of personal data within the scope.",
+      "done_when": "Where PII mixes with business assets is identified, with the pores through which it is reachable.",
+      "channel_notes": {
+        "human-security": "Personal details discoverable through work channels; use of personal accounts for business.",
+        "physical-security": "Personal effects and records in business areas, unsecured HR and medical files.",
+        "wireless-communications": "Personal devices on business networks, device identifiers broadcasting people's movements.",
+        "telecommunications": "Personal numbers in business directories, voicemail containing personal data.",
+        "data-networks": "PII in logs, backups, test data, tickets and error messages; cross-tenant or cross-user leakage."
+      }
+    },
+    {
+      "id": "L",
+      "phase": "III",
+      "name": "Exposure Verification",
+      "purpose": "Discover freely available information that gives indirect visibility of targets or assets in scope. Each such item is an Exposure limitation.",
+      "done_when": "Public sources have been searched systematically and each exposure is recorded with its source and what it reveals.",
+      "channel_notes": {
+        "human-security": "Staff lists, roles, absences, photographs of badges and screens, recruitment detail.",
+        "physical-security": "Street and satellite imagery, floor plans, permit filings, vendor case studies.",
+        "wireless-communications": "Public wardriving databases, device registration lookups, FCC/type filings.",
+        "telecommunications": "Published number ranges, directory entries, leaked call detail.",
+        "data-networks": "Certificate transparency, DNS and passive DNS, code and config in public repos, paste sites, search-engine indexes, cached errors."
+      }
+    },
+    {
+      "id": "M",
+      "phase": "III",
+      "name": "Competitive Intelligence Scouting",
+      "purpose": "Derive, from the scope alone, information of competitive value to the target owner — what an adversary learns about the business by watching its infrastructure.",
+      "done_when": "Business-impacting inferences are documented with the technical observations that support them.",
+      "channel_notes": {
+        "human-security": "Hiring, reorganization and partnership signals from people's public activity.",
+        "physical-security": "Deliveries, expansion works, occupancy and equipment visible from outside.",
+        "wireless-communications": "Vendor fingerprints and device populations revealing platform choices.",
+        "telecommunications": "Call volumes, IVR menus and site presence revealing operations and scale.",
+        "data-networks": "Technology stack, third-party dependencies, staging and pre-release assets, growth inferred from infrastructure."
+      }
+    },
+    {
+      "id": "N",
+      "phase": "IV",
+      "name": "Quarantine Verification",
+      "purpose": "Determine whether hostile or anomalous interaction is contained — in both directions — and how allow/deny decisions are made.",
+      "done_when": "Containment behaviour is measured for inbound and outbound interaction, including how long it lasts and how it is lifted.",
+      "channel_notes": {
+        "human-security": "Whether a suspicious approach is cut off and circulated, or just individually ignored.",
+        "physical-security": "Mantraps, holding areas, escort rules, whether an unbadged person is stopped rather than merely noticed.",
+        "wireless-communications": "Client isolation, rogue containment, deauth of unknown devices, guest segmentation.",
+        "telecommunications": "Call blocking, mailbox lockout, fraud cut-off, whether blocks persist.",
+        "data-networks": "Segmentation and egress filtering, WAF/EDR blocking duration, session invalidation, account lockout."
+      }
+    },
+    {
+      "id": "O",
+      "phase": "IV",
+      "name": "Privileges Audit",
+      "purpose": "Map credentials and privilege levels and measure the impact of their misuse — including escalation that was never earned.",
+      "done_when": "Privilege boundaries are tested from each authenticated position available, and every crossing is evidenced.",
+      "channel_notes": {
+        "human-security": "What a person will do for a claimed authority; what access an ordinary role can obtain by asking.",
+        "physical-security": "Where a visitor or contractor badge reaches; master-key and override scope.",
+        "wireless-communications": "Guest-to-internal reachability, management-interface access from the air.",
+        "telecommunications": "Extension-to-admin functions, DISA to outbound trunks, mailbox-to-mailbox access.",
+        "data-networks": "Horizontal and vertical access control, token and role handling, admin surface, service-account reach."
+      }
+    },
+    {
+      "id": "P",
+      "phase": "IV",
+      "name": "Survivability Validation / Service Continuity",
+      "purpose": "Measure the target's resilience to excessive, adverse or interrupted conditions — continuity, failover and graceful failure. Requires explicit written sign-off; skip the module and say so if it is not granted.",
+      "done_when": "Either resilience is measured within the authorized envelope, or the module is recorded as excluded with the reason.",
+      "channel_notes": {
+        "human-security": "Cover during absence, single points of human failure, whether a refused request has a documented fallback.",
+        "physical-security": "Power, cooling, access during outage, whether fail-safe means open or locked.",
+        "wireless-communications": "Behaviour under interference and congestion, fallback to weaker modes.",
+        "telecommunications": "Trunk failover, behaviour when lines saturate, emergency routing (never test live emergency services).",
+        "data-networks": "Failover and degradation under load, dependency failure handling, backup restore, rate-limit behaviour."
+      }
+    },
+    {
+      "id": "Q",
+      "phase": "IV",
+      "name": "Alert and Log Review",
+      "purpose": "Compare the audit's own record of activity to what the target detected and recorded. The end survey: what really got seen.",
+      "done_when": "The analyst timeline is reconciled against the target's logs and alerts, and every gap or discrepancy is reported.",
+      "channel_notes": {
+        "human-security": "Which approaches were reported, by whom, how accurately, and what was done with the report.",
+        "physical-security": "Guard logs, visitor books, badge and camera records against the actual visits.",
+        "wireless-communications": "WIDS and controller logs against the associations and captures performed.",
+        "telecommunications": "CDRs and fraud alerts against the calls placed.",
+        "data-networks": "IDS/WAF/EDR/application logs against the requests sent, including what was silently dropped."
+      }
+    }
+  ]
+}
